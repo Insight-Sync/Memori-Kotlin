@@ -1,6 +1,14 @@
 package com.memori.app.ui.navigation
 
+import android.content.pm.ApplicationInfo
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,6 +30,12 @@ import com.memori.app.ui.screens.trail.TrailStartScreen
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
+
+    val context = LocalContext.current
+
+    val modoDesenvolvimento =
+        (context.applicationInfo.flags and
+                ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     val sessionReady by authViewModel.sessionReady.collectAsState()
     val sessionToken by authViewModel.sessionToken.collectAsState()
@@ -157,11 +171,34 @@ fun AppNavigation() {
             }
 
             composable(Screen.Splash.route + "_trail") {
-                TrailStartScreen(
-                    onStartAR = {
-                        navController.navigate(Screen.ARScanner.route)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    TrailStartScreen(
+                        onStartAR = {
+                            navController.navigate(
+                                Screen.ARScanner.route
+                            )
+                        }
+                    )
+
+                    // Atalho disponível apenas na versão de desenvolvimento.
+                    if (modoDesenvolvimento) {
+                        Button(
+                            onClick = {
+                                navController.navigate(
+                                    Screen.Puzzle.route
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .navigationBarsPadding()
+                                .padding(24.dp)
+                        ) {
+                            Text("Testar puzzle — sem câmera")
+                        }
                     }
-                )
+                }
             }
 
             composable(Screen.ARScanner.route) {
@@ -175,7 +212,9 @@ fun AppNavigation() {
             composable(Screen.Puzzle.route) {
                 PuzzleScreen(
                     onPuzzleCompleted = { time ->
-                        navController.navigate("final_story/$time")
+                        navController.navigate("final_story/$time") {
+                            launchSingleTop = true
+                        }
                     },
                     onExit = {
                         navController.navigate(Screen.HomeMap.route) {
@@ -197,7 +236,9 @@ fun AppNavigation() {
                 FinalStoryScreen(
                     timeElapsed = time,
                     onNavigateToRanking = {
-                        navController.navigate(Screen.Ranking.route)
+                        navController.navigate(Screen.Ranking.route) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

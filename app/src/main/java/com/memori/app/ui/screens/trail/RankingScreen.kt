@@ -2,131 +2,245 @@ package com.memori.app.ui.screens.trail
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.theme.RedPrimary
-
-data class RankingUser(
-    val name: String,
-    val time: String,
-    val emoji: String,
-    val color: Color
-)
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun RankingScreen(onBackToHome: () -> Unit) {
-    val mockUsers = listOf(
-        RankingUser("Larissa (Você)", "00:28:15 h", "😊", Color(0xFFFFD54F)),
-        RankingUser("PRIMEIRO LUGAR", "00:25:40 h", "👑", Color(0xFFFF5252)),
-        RankingUser("Mateus", "00:30:40 h", "🟡", Color(0xFFFFD54F)),
-        RankingUser("Beatriz", "00:32:12 h", "🔵", Color(0xFF64B5F6)),
-        RankingUser("Rodrigo", "00:35:05 h", "🟢", Color(0xFF81C784)),
-        RankingUser("Ana", "00:40:00 h", "🟣", Color(0xFFBA68C8))
-    )
+    val authViewModel = LocalAuthViewModel.current
+    val token by authViewModel.sessionToken.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5))) {
-        // Background Map (Simulado)
-        Box(modifier = Modifier.fillMaxSize().background(Color.Gray.copy(alpha = 0.1f)))
+    var resposta by remember {
+        mutableStateOf<RankingTemposResponse?>(null)
+    }
 
+    var loading by remember {
+        mutableStateOf(true)
+    }
+
+    var erro by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var atualizar by remember {
+        mutableIntStateOf(0)
+    }
+
+    LaunchedEffect(token, atualizar) {
+        loading = true
+        erro = null
+        resposta = null
+
+        try {
+            val tokenAtual = token
+
+            if (tokenAtual == null) {
+                erro = "Entre novamente para consultar o ranking."
+            } else {
+                resposta = RankingClient.api.buscarRanking(
+                    authorization = "Bearer $tokenAtual"
+                )
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            erro = mensagemErroRanking(error)
+        } finally {
+            loading = false
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF5F5F5))
+            .padding(20.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
-                .padding(24.dp)
-                .align(Alignment.Center),
-            shape = RoundedCornerShape(32.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+                .fillMaxHeight(0.92f),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color.White
+            ),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("Ranking", fontSize = 24.sp, color = Color.Gray)
-                        Text("#01 ${mockUsers[1].name}", color = RedPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text(mockUsers[1].time, color = Color.Gray, fontSize = 14.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Ranking",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = RedPrimary
+                        )
+
+                        Text(
+                            text = "Quebra-cabeça do KKKK",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
                     }
-                    Surface(
-                        color = Color(0xFFC5E1A5),
-                        shape = RoundedCornerShape(8.dp)
+
+                    IconButton(
+                        onClick = { atualizar++ },
+                        enabled = !loading
                     ) {
-                        Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.TrendingUp, null, tint = Color(0xFF689F38), modifier = Modifier.size(20.dp))
-                            Icon(Icons.Default.Star, null, tint = Color(0xFF689F38), modifier = Modifier.size(16.dp))
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Atualizar ranking",
+                            tint = RedPrimary
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Crown and Top User Avatar
-                Box(contentAlignment = Alignment.Center) {
-                    Text("👑", modifier = Modifier.offset(y = (-55).dp), fontSize = 40.sp)
-                    Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .border(4.dp, Color(0xFFFFD54F), CircleShape)
-                            .padding(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().background(mockUsers[0].color, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(mockUsers[0].emoji, fontSize = 40.sp)
-                        }
-                    }
-                }
+                Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = mockUsers[0].name,
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    fontSize = 22.sp,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Bold
+                    text = "Melhor tempo de cada pessoa",
+                    fontSize = 13.sp,
+                    color = Color.Gray
                 )
 
-                Divider(modifier = Modifier.fillMaxWidth(0.7f).padding(bottom = 16.dp), color = Color.LightGray)
+                Spacer(Modifier.height(16.dp))
 
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
                 ) {
-                    itemsIndexed(mockUsers.drop(1)) { index, user ->
-                        RankingItem(index + 2, user)
+                    val dados = resposta
+                    val mensagem = erro
+
+                    when {
+                        loading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center),
+                                color = RedPrimary
+                            )
+                        }
+
+                        mensagem != null -> {
+                            Column(
+                                modifier = Modifier.align(Alignment.Center),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = mensagem,
+                                    textAlign = TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+
+                                TextButton(
+                                    onClick = { atualizar++ }
+                                ) {
+                                    Text("Tentar novamente")
+                                }
+                            }
+                        }
+
+                        dados == null || dados.rankings.isEmpty() -> {
+                            Text(
+                                text = "Ainda não há resultados.\n" +
+                                        "Conclua o desafio para participar!",
+                                modifier = Modifier.align(Alignment.Center),
+                                textAlign = TextAlign.Center,
+                                color = Color.Gray
+                            )
+                        }
+
+                        else -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                item {
+                                    val meu = dados.meuResultado
+
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = Color(0xFFFFF3E0)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp)
+                                        ) {
+                                            Text(
+                                                text = "Seu melhor resultado",
+                                                fontWeight = FontWeight.Bold,
+                                                color = RedPrimary
+                                            )
+
+                                            Spacer(Modifier.height(4.dp))
+
+                                            Text(
+                                                text = if (meu != null) {
+                                                    "#${meu.posicao} • " +
+                                                            formatarTempo(meu.tempoSegundos)
+                                                } else {
+                                                    "Você ainda não concluiu este desafio."
+                                                },
+                                                color = Color.DarkGray
+                                            )
+                                        }
+                                    }
+                                }
+
+                                items(
+                                    items = dados.rankings,
+                                    key = { it.usuarioId }
+                                ) { resultado ->
+                                    RankingTempoItem(
+                                        resultado = resultado,
+                                        souEu = resultado.usuarioId ==
+                                                dados.meuResultado?.usuarioId
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                
+                Spacer(Modifier.height(16.dp))
+
                 Button(
                     onClick = onBackToHome,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RedPrimary),
-                    shape = RoundedCornerShape(28.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(26.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RedPrimary
+                    )
                 ) {
-                    Text("Voltar ao Início", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Voltar ao início")
                 }
             }
         }
@@ -134,44 +248,67 @@ fun RankingScreen(onBackToHome: () -> Unit) {
 }
 
 @Composable
-fun RankingItem(rank: Int, user: RankingUser) {
-    Row(
+private fun RankingTempoItem(
+    resultado: RankingTempo,
+    souEu: Boolean
+) {
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(50.dp)
-                .border(2.dp, RedPrimary, CircleShape)
-                .padding(4.dp)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(user.color, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(user.emoji, fontSize = 20.sp)
-            }
+        shape = RoundedCornerShape(16.dp),
+        color = if (souEu) {
+            Color(0xFFFFF8E1)
+        } else {
+            Color(0xFFF9F9F9)
+        },
+        border = if (souEu) {
+            BorderStroke(1.dp, RedPrimary)
+        } else {
+            null
         }
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text("#0$rank", color = RedPrimary, fontWeight = FontWeight.Bold)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(user.name, color = Color.Gray, fontSize = 14.sp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (resultado.posicao == 1) {
+                    "👑"
+                } else {
+                    "#${resultado.posicao}"
+                },
+                fontWeight = FontWeight.Bold,
+                color = RedPrimary,
+                fontSize = 20.sp,
+                modifier = Modifier.width(44.dp)
+            )
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    ".".repeat(20),
-                    color = Color.LightGray,
-                    fontSize = 14.sp,
-                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
-                    maxLines = 1
+                    text = resultado.nomeUsuario +
+                            if (souEu) " (Você)" else "",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Text(user.time, color = Color.Gray, fontSize = 14.sp)
+
+                Text(
+                    text = resultado.nome,
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            Divider(modifier = Modifier.padding(top = 4.dp), color = Color.LightGray, thickness = 0.5.dp)
+
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                text = formatarTempo(resultado.tempoSegundos),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = RedPrimary
+            )
         }
     }
 }

@@ -1,23 +1,18 @@
 package com.memori.app.ui.screens.profile
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIosNew
-import androidx.compose.material.icons.filled.ArrowForwardIos
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -25,22 +20,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
+import com.memori.app.ui.screens.trail.RankingClient
+import com.memori.app.ui.screens.trail.RankingTempo
+import com.memori.app.ui.screens.trail.formatarTempo
+import com.memori.app.ui.screens.trail.mensagemErroRanking
 import com.memori.app.ui.theme.RedPrimary
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
-data class Achievement(
-    val title: String,
-    val rank: String,
-    val time: String,
-    val emoji: String,
-    val color: Color
-)
-
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AchievementsScreen() {
     val viewModel = LocalAuthViewModel.current
     val usuario by viewModel.usuario.collectAsState()
+    val token by viewModel.sessionToken.collectAsState()
 
     val nomeCurto = usuario?.nome
         ?.trim()
@@ -48,42 +39,65 @@ fun AchievementsScreen() {
         ?.takeIf { it.isNotBlank() }
         ?: "Perfil"
 
-    // Conquistas de exemplo: serão integradas à API depois.
-    val achievements = remember {
-        listOf(
-            Achievement(
-                "Lanternas Brilhantes",
-                "#02 Lugar",
-                "00:30:40 h",
-                "🏮",
-                Color(0xFFFF5252)
-            ),
-            Achievement(
-                "Mestre dos Origami",
-                "#01 Lugar",
-                "00:15:20 h",
-                "🦢",
-                Color(0xFF4CAF50)
-            ),
-            Achievement(
-                "Explorador KKKK",
-                "#05 Lugar",
-                "01:10:00 h",
-                "🏛️",
-                Color(0xFFFFC107)
-            )
+    // Ao trocar de conta, recria os estados desta tela.
+    key(token) {
+        ConteudoConquistas(
+            token = token,
+            nomeCurto = nomeCurto
         )
     }
+}
 
-    val pagerState = rememberPagerState(
-        pageCount = { achievements.size }
-    )
-    val scope = rememberCoroutineScope()
+@Composable
+private fun ConteudoConquistas(
+    token: String?,
+    nomeCurto: String
+) {
+    var resultado by remember {
+        mutableStateOf<RankingTempo?>(null)
+    }
+
+    var carregando by remember {
+        mutableStateOf(true)
+    }
+
+    var erro by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var atualizacao by remember {
+        mutableIntStateOf(0)
+    }
+
+    LaunchedEffect(token, atualizacao) {
+        carregando = true
+        erro = null
+        resultado = null
+
+        try {
+            if (token.isNullOrBlank()) {
+                erro = "Entre novamente para consultar suas conquistas."
+            } else {
+                val resposta = RankingClient.api.buscarRanking(
+                    authorization = "Bearer $token"
+                )
+
+                resultado = resposta.meuResultado
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            erro = mensagemErroRanking(error)
+        } finally {
+            carregando = false
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF9F9F9))
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -111,19 +125,13 @@ fun AchievementsScreen() {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFFEB3B))
-                            .border(1.dp, RedPrimary, CircleShape),
+                            .background(
+                                Color(0xFFFFEB3B),
+                                CircleShape
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("😑", fontSize = 12.sp)
-
-                        Text(
-                            text = "💢",
-                            modifier = Modifier.align(Alignment.TopEnd),
-                            fontSize = 6.sp,
-                            color = Color.Red
-                        )
+                        Text("😑", fontSize = 14.sp)
                     }
 
                     Spacer(Modifier.width(8.dp))
@@ -144,32 +152,22 @@ fun AchievementsScreen() {
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
-                border = BorderStroke(1.dp, RedPrimary),
-                shadowElevation = 2.dp
+                border = BorderStroke(1.dp, RedPrimary)
             ) {
-                Row(
+                Text(
+                    text = when {
+                        carregando -> "Carregando..."
+                        erro != null -> "Indisponível"
+                        resultado != null -> "1 conquista 🏆"
+                        else -> "0 conquistas"
+                    },
                     modifier = Modifier.padding(
                         horizontal = 12.dp,
-                        vertical = 6.dp
+                        vertical = 8.dp
                     ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Pontuação de exemplo.
-                    Text(
-                        text = "10",
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(Modifier.width(4.dp))
-
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = "Estrelas",
-                        tint = Color(0xFFFFC107),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
             }
         }
 
@@ -184,109 +182,152 @@ fun AchievementsScreen() {
 
         Spacer(Modifier.height(24.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                IconButton(
-                    onClick = {
-                        if (pagerState.currentPage > 0) {
-                            scope.launch {
-                                pagerState.animateScrollToPage(
-                                    pagerState.currentPage - 1
-                                )
-                            }
-                        }
-                    },
-                    enabled = pagerState.currentPage > 0
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBackIosNew,
-                        contentDescription = "Conquista anterior",
-                        tint = if (pagerState.currentPage > 0) {
-                            RedPrimary
-                        } else {
-                            Color.LightGray
-                        }
-                    )
-                }
-            }
+        val conquista = resultado
+        val mensagemErro = erro
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .width(280.dp)
-                    .height(450.dp)
-            ) { page ->
-                AchievementCard(achievements[page])
-            }
-
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                IconButton(
-                    onClick = {
-                        if (pagerState.currentPage < achievements.lastIndex) {
-                            scope.launch {
-                                pagerState.animateScrollToPage(
-                                    pagerState.currentPage + 1
-                                )
-                            }
-                        }
-                    },
-                    enabled = pagerState.currentPage < achievements.lastIndex
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowForwardIos,
-                        contentDescription = "Próxima conquista",
-                        tint = if (
-                            pagerState.currentPage < achievements.lastIndex
-                        ) {
-                            RedPrimary
-                        } else {
-                            Color.LightGray
-                        }
-                    )
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            repeat(achievements.size) { index ->
-                val cor = if (pagerState.currentPage == index) {
-                    RedPrimary
-                } else {
-                    Color.LightGray
-                }
-
-                Box(
+        when {
+            carregando -> {
+                Column(
                     modifier = Modifier
-                        .padding(4.dp)
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(cor)
-                )
+                        .fillMaxWidth()
+                        .padding(vertical = 64.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        color = RedPrimary
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = "Buscando suas conquistas...",
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            mensagemErro != null -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Não foi possível carregar",
+                            color = RedPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Text(
+                            text = mensagemErro,
+                            textAlign = TextAlign.Center,
+                            color = Color.Gray
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        Button(
+                            onClick = { atualizacao++ },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = RedPrimary
+                            )
+                        ) {
+                            Text("Tentar novamente")
+                        }
+                    }
+                }
+            }
+
+            conquista == null -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "🏁",
+                            fontSize = 64.sp
+                        )
+
+                        Spacer(Modifier.height(20.dp))
+
+                        Text(
+                            text = "Você ainda não possui conquistas",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = RedPrimary,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Text(
+                            text = "Conclua o quebra-cabeça do KKKK " +
+                                    "para registrar sua primeira conquista!",
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            else -> {
+                ConquistaKKKKCard(resultado = conquista)
             }
         }
+
+        Spacer(Modifier.height(24.dp))
+
+        OutlinedButton(
+            onClick = { atualizacao++ },
+            enabled = !carregando,
+            shape = RoundedCornerShape(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
+                tint = RedPrimary
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                text = "Atualizar conquistas",
+                color = RedPrimary
+            )
+        }
+
+        Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
-fun AchievementCard(achievement: Achievement) {
+private fun ConquistaKKKKCard(
+    resultado: RankingTempo
+) {
     Card(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 4.dp),
+            .widthIn(max = 320.dp)
+            .fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White
@@ -301,70 +342,82 @@ fun AchievementCard(achievement: Achievement) {
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(3) {
-                    Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = null,
-                        tint = Color(0xFFFFD54F),
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
+            Text(
+                text = "Desafio concluído",
+                color = Color(0xFF2E7D32),
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+
+            Spacer(Modifier.height(16.dp))
 
             Text(
-                text = achievement.title,
+                text = "Explorador do KKKK",
                 color = Color(0xFF666666),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
 
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                text = "Quebra-cabeça do Conjunto Monumental KKKK",
+                color = Color.Gray,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(32.dp))
+
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                    .size(140.dp)
+                    .background(
+                        Color(0xFFFFC107).copy(alpha = 0.12f),
+                        CircleShape
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .background(
-                            achievement.color.copy(alpha = 0.1f),
-                            CircleShape
-                        )
-                )
-
                 Text(
-                    text = achievement.emoji,
+                    text = "🏛️",
                     fontSize = 80.sp
                 )
             }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = achievement.rank,
-                    color = RedPrimary,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold
-                )
+            Spacer(Modifier.height(32.dp))
 
-                Text(
-                    text = achievement.time,
-                    color = Color.LightGray,
-                    fontSize = 16.sp
-                )
-            }
+            Text(
+                text = "#${resultado.posicao} Lugar",
+                color = RedPrimary,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Text(
+                text = "Posição atual no ranking",
+                color = Color.Gray,
+                fontSize = 12.sp
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            Text(
+                text = "Seu melhor tempo",
+                color = Color.Gray,
+                fontSize = 14.sp
+            )
+
+            Text(
+                text = formatarTempo(resultado.tempoSegundos),
+                color = RedPrimary,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
