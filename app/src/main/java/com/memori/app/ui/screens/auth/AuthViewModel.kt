@@ -1,12 +1,23 @@
 package com.memori.app.ui.screens.auth
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.util.Base64
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-// import com.google.firebase.auth.FirebaseAuth // Comentado para teste sem Firebase
-import kotlinx.coroutines.delay
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import retrofit2.HttpException
+
+val LocalAuthViewModel = staticCompositionLocalOf<AuthViewModel> {
+    error("AuthViewModel não foi disponibilizado pela navegação.")
+}
 
 sealed class AuthState {
     object Idle : AuthState()
@@ -15,64 +26,270 @@ sealed class AuthState {
     data class Error(val message: String) : AuthState()
 }
 
-class AuthViewModel : ViewModel() {
-    // private val auth: FirebaseAuth = FirebaseAuth.getInstance() // Comentado
-    
+class AuthViewModel(
+    application: Application
+) : AndroidViewModel(application) {
+
+    private val sessionStore = SessionStore(application)
+
     private val _authState = MutableStateFlow<AuthState>(AuthState.Idle)
     val authState: StateFlow<AuthState> = _authState
 
-    fun login(email: String, pass: String, onSuccess: () -> Unit) {
+    private val _sessionToken = MutableStateFlow<String?>(null)
+    val sessionToken: StateFlow<String?> = _sessionToken
+
+    private val _sessionReady = MutableStateFlow(false)
+    val sessionReady: StateFlow<Boolean> = _sessionReady
+
+    private val _usuario = MutableStateFlow<UsuarioResponse?>(null)
+    val usuario: StateFlow<UsuarioResponse?> = _usuario
+
+    private val _perfilLoading = MutableStateFlow(false)
+    val perfilLoading: StateFlow<Boolean> = _perfilLoading
+
+    private val _perfilErro = MutableStateFlow<String?>(null)
+    val perfilErro: StateFlow<String?> = _perfilErro
+
+    init {
         viewModelScope.launch {
-            _authState.value = AuthState.Loading
-            delay(1000) // Simula tempo de rede
-            
-            // Simulação de login (Qualquer senha com mais de 3 dígitos passa)
-            if (pass.length >= 3) {
-                _authState.value = AuthState.Success("Bem-vindo (Modo Teste)!")
-                onSuccess()
-            } else {
-                _authState.value = AuthState.Error("Senha muito curta para o teste!")
-            }
-            
-            /* CÓDIGO FIREBASE COMENTADO:
-            auth.signInWithEmailAndPassword(email, pass)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        _authState.value = AuthState.Success("Bem-vindo!")
-                        onSuccess()
-                    } else {
-                        _authState.value = AuthState.Error(task.exception?.localizedMessage ?: "Erro ao entrar")
-                    }
+            try {
+                val token = withContext(Dispatchers.IO) {
+                    sessionStore.carregar()
                 }
-            */
+
+                _sessionToken.value = token
+
+                if (token != null) {
+                    carregarPerfil(token)
+                }
+            } finally {
+                _sessionReady.value = true
+            }
         }
     }
 
-    fun register(email: String, pass: String, name: String, onSuccess: () -> Unit) {
-        viewModelScope.launch {
-            _authState.value = AuthState.Loading
-            delay(1000) // Simula tempo de rede
-            
-            _authState.value = AuthState.Success("Conta criada (Modo Teste)!")
-            onSuccess()
+    fun login(
+        email: String,
+        pass: String,
+        onSuccess: () -> Unit
+    ) {
+        if (!_sessionReady.value) return
+        if (_authState.value is AuthState.Loading) return
 
-            /* CÓDIGO FIREBASE COMENTADO:
-            auth.createUserWithEmailAndPassword(email, pass)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        _authState.value = AuthState.Success("Conta criada!")
-                        onSuccess()
-                    } else {
-                        _authState.value = AuthState.Error(task.exception?.localizedMessage ?: "Erro ao cadastrar")
-                    }
-                }
-            */
+        if (email.isBlank() || pass.isBlank()) {
+            _authState.value = AuthState.Error(
+                "Informe o e-mail e a senha."
+            )
+            return
         }
+
+        _authState.value = AuthState.Loading
+
+        viewModelScope.launch {
+            try {
+                val resposta = ApiClient.authApi.login(
+                    LoginRequest(
+                        emailUsuario = email.trim().lowercase(),
+                        senhaUsuario = pass
+                    )
+                )
+
+                check(resposta.token.isNotBlank()) {
+                    "A API não retornou um token válido."
+                }
+
+                withContext(Dispatchers.IO) {
+                    sessionStore.salvar(resposta.token)
+                }
+
+                _sessionToken.value = resposta.token
+                _usuario.value = resposta.usuario
+                _perfilErro.value = null
+
+                _authState.value = AuthState.Success(
+                    "Login realizado!"
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _authState.value = AuthState.Error(
+                    mensagemErro(error)
+                )
+                return@launch
+            }
+
+            onSuccess()
+        }
+    }
+
+    fun register(
+        email: String,
+        pass: String,
+        name: String,
+        username: String,
+        onSuccess: () -> Unit
+    ) {
+        if (_authState.value is AuthState.Loading) return
+
+        if (listOf(email, pass, name, username).any { it.isBlank() }) {
+            _authState.value = AuthState.Error(
+                "Preencha todos os campos."
+            )
+            return
+        }
+
+        if (pass.length < 8) {
+            _authState.value = AuthState.Error(
+                "A senha deve ter pelo menos 8 caracteres."
+            )
+            return
+        }
+
+        if (pass.toByteArray(Charsets.UTF_8).size > 72) {
+            _authState.value = AuthState.Error(
+                "A senha excede o tamanho permitido."
+            )
+            return
+        }
+
+        _authState.value = AuthState.Loading
+
+        viewModelScope.launch {
+            try {
+                ApiClient.authApi.register(
+                    RegisterRequest(
+                        nome = name.trim(),
+                        nomeUsuario = username.trim(),
+                        emailUsuario = email.trim().lowercase(),
+                        senhaUsuario = pass
+                    )
+                )
+
+                _authState.value = AuthState.Success(
+                    "Conta criada! Entre com seu e-mail e senha."
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _authState.value = AuthState.Error(
+                    mensagemErro(error)
+                )
+                return@launch
+            }
+
+            onSuccess()
+        }
+    }
+
+    fun atualizarPerfil() {
+        val token = _sessionToken.value ?: return
+        if (_perfilLoading.value) return
+        if (_authState.value is AuthState.Loading) return
+
+        viewModelScope.launch {
+            carregarPerfil(token)
+        }
+    }
+
+    private suspend fun carregarPerfil(token: String) {
+        _perfilLoading.value = true
+        _perfilErro.value = null
+
+        try {
+            val partes = token.split(".")
+            require(partes.size == 3)
+
+            // O ID identifica a consulta.
+            // A API valida a assinatura do token recebido.
+            val payload = Base64.decode(
+                partes[1],
+                Base64.URL_SAFE or Base64.NO_WRAP
+            ).toString(Charsets.UTF_8)
+
+            val id = JSONObject(payload).getString("id")
+
+            val resposta = ApiClient.authApi.buscarPerfil(
+                id = id,
+                authorization = "Bearer $token"
+            )
+
+            // Evita aplicar uma resposta de uma sessão já encerrada.
+            if (_sessionToken.value == token) {
+                _usuario.value = resposta.usuario
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: HttpException) {
+            if (_sessionToken.value == token) {
+                if (error.code() in listOf(401, 403, 404)) {
+                    encerrarSessao()
+                } else {
+                    _perfilErro.value = mensagemErro(error)
+                }
+            }
+        } catch (error: Exception) {
+            if (_sessionToken.value == token) {
+                _perfilErro.value =
+                    "Não foi possível carregar seu perfil. Tente novamente."
+            }
+        } finally {
+            _perfilLoading.value = false
+        }
+    }
+
+    fun logout(onSuccess: () -> Unit) {
+        if (_authState.value is AuthState.Loading) return
+
+        _authState.value = AuthState.Loading
+
+        viewModelScope.launch {
+            try {
+                encerrarSessao()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _authState.value = AuthState.Error(
+                    "Não foi possível encerrar a sessão. Tente novamente."
+                )
+                return@launch
+            }
+
+            onSuccess()
+        }
+    }
+
+    private suspend fun encerrarSessao() {
+        withContext(Dispatchers.IO) {
+            sessionStore.limpar()
+        }
+
+        _sessionToken.value = null
+        _usuario.value = null
+        _perfilErro.value = null
+        _authState.value = AuthState.Idle
     }
 
     fun resetState() {
         _authState.value = AuthState.Idle
     }
-    
-    // fun getCurrentUser() = auth.currentUser // Comentado
+
+    private fun mensagemErro(error: Exception): String {
+        return when (error) {
+            is HttpException -> {
+                val mensagem = runCatching {
+                    val corpo = error.response()?.errorBody()?.string()
+                    JSONObject(corpo ?: "{}").optString("error")
+                }.getOrNull()
+
+                mensagem?.takeIf { it.isNotBlank() }
+                    ?: "Não foi possível concluir a solicitação (${error.code()})."
+            }
+
+            is IOException ->
+                "Não foi possível acessar a API ou salvar a sessão."
+
+            else ->
+                "Não foi possível concluir a solicitação."
+        }
+    }
 }

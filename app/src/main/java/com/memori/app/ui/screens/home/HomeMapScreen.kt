@@ -14,19 +14,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarOutline
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -34,6 +30,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.memori.app.R
+import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.theme.RedPrimary
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -47,85 +44,169 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 fun HomeMapScreen(onNavigateToProfile: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    
-    val kkkkLocation = remember { GeoPoint(-24.486862, -47.840627) }
-    val mapView = remember { MapView(context) }
+    val viewModel = LocalAuthViewModel.current
 
-    LaunchedEffect(Unit) {
-        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-        Configuration.getInstance().userAgentValue = context.packageName
-        
-        mapView.setTileSource(TileSourceFactory.MAPNIK)
-        mapView.setMultiTouchControls(true)
-        mapView.setBuiltInZoomControls(false) 
-        mapView.controller.setZoom(18.0)
-        mapView.controller.setCenter(kkkkLocation)
+    val usuario by viewModel.usuario.collectAsState()
+
+    val nomeCurto = usuario?.nome
+        ?.trim()
+        ?.substringBefore(" ")
+        ?.takeIf { it.isNotBlank() }
+        ?: "Perfil"
+
+    val kkkkLocation = remember {
+        GeoPoint(-24.486862, -47.840627)
     }
 
-    var hasLocationPermission by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
-    }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        hasLocationPermission = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
-    }
-    LaunchedEffect(Unit) {
-        if (!hasLocationPermission) {
-            launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+    val mapView = remember(context) {
+        Configuration.getInstance().load(
+            context,
+            context.getSharedPreferences(
+                "osmdroid",
+                Context.MODE_PRIVATE
+            )
+        )
+
+        Configuration.getInstance().userAgentValue =
+            context.packageName
+
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(true)
+            setBuiltInZoomControls(false)
+            controller.setZoom(18.0)
+            controller.setCenter(kkkkLocation)
+
+            val marker = Marker(this).apply {
+                position = kkkkLocation
+                icon = ContextCompat.getDrawable(
+                    context,
+                    R.drawable.guaracui
+                )
+                setAnchor(
+                    Marker.ANCHOR_CENTER,
+                    Marker.ANCHOR_CENTER
+                )
+                setOnMarkerClickListener { _, _ -> true }
+            }
+
+            overlays.add(marker)
         }
     }
 
-    DisposableEffect(lifecycleOwner) {
+    val locationOverlay = remember(mapView) {
+        MyLocationNewOverlay(
+            GpsMyLocationProvider(context),
+            mapView
+        )
+    }
+
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasLocationPermission =
+            permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                    permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasLocationPermission) {
+            launcher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+
+    DisposableEffect(mapView, locationOverlay, hasLocationPermission) {
+        if (hasLocationPermission) {
+            mapView.overlays.add(locationOverlay)
+            locationOverlay.enableMyLocation()
+            mapView.invalidate()
+        }
+
+        onDispose {
+            locationOverlay.disableMyLocation()
+            mapView.overlays.remove(locationOverlay)
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, mapView) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> mapView.onResume()
                 Lifecycle.Event.ON_PAUSE -> mapView.onPause()
-                else -> {}
+                else -> Unit
             }
         }
+
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+
+        if (
+            lifecycleOwner.lifecycle.currentState.isAtLeast(
+                Lifecycle.State.RESUMED
+            )
+        ) {
+            mapView.onResume()
+        }
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onPause()
+        }
+    }
+
+    DisposableEffect(mapView) {
+        onDispose {
+            mapView.onDetach()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             factory = { mapView },
-            modifier = Modifier.fillMaxSize(),
-            update = { view ->
-                view.overlays.clear()
-                val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), view)
-                locationOverlay.enableMyLocation()
-                view.overlays.add(locationOverlay)
-
-                val marker = Marker(view)
-                marker.position = kkkkLocation
-                marker.icon = ContextCompat.getDrawable(context, R.drawable.guaracui)
-                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                marker.setOnMarkerClickListener { _, _ ->
-                    
-                    true
-                }
-                view.overlays.add(marker)
-            }
+            modifier = Modifier.fillMaxSize()
         )
 
-
-
-        // FAB: My Location - MOVED UP and Functional
         FloatingActionButton(
             onClick = {
-                val overlay = mapView.overlays.filterIsInstance<MyLocationNewOverlay>().firstOrNull()
-                if (overlay != null) {
-                    val location = overlay.myLocation
-                    if (location != null) {
-                        mapView.controller.animateTo(location)
+                if (!hasLocationPermission) {
+                    launcher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                } else {
+                    val localizacao = locationOverlay.myLocation
+
+                    if (localizacao != null) {
+                        mapView.controller.animateTo(localizacao)
                         mapView.controller.setZoom(18.0)
                     } else {
-                        overlay.enableMyLocation()
-                        // Tenta centralizar assim que obter a primeira correção
-                        overlay.runOnFirstFix {
+                        locationOverlay.enableMyLocation()
+
+                        locationOverlay.runOnFirstFix {
                             mapView.post {
-                                mapView.controller.animateTo(overlay.myLocation)
-                                mapView.controller.setZoom(18.0)
+                                locationOverlay.myLocation?.let {
+                                    mapView.controller.animateTo(it)
+                                    mapView.controller.setZoom(18.0)
+                                }
                             }
                         }
                     }
@@ -133,39 +214,94 @@ fun HomeMapScreen(onNavigateToProfile: () -> Unit) {
             },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 80.dp, end = 16.dp), 
+                .padding(top = 80.dp, end = 16.dp),
             containerColor = Color.White,
             elevation = FloatingActionButtonDefaults.elevation(4.dp),
             shape = CircleShape
         ) {
-            Icon(Icons.Default.MyLocation, "Onde estou", tint = RedPrimary)
+            Icon(
+                imageVector = Icons.Default.MyLocation,
+                contentDescription = "Onde estou",
+                tint = RedPrimary
+            )
         }
 
-        // Top Header HUD
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 32.dp, start = 16.dp, end = 16.dp)
                 .align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.clickable { onNavigateToProfile() },
-                shape = RoundedCornerShape(20.dp), 
-                color = Color.White, 
-                border = BorderStroke(1.dp, RedPrimary), 
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .clickable { onNavigateToProfile() },
+                shape = RoundedCornerShape(20.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, RedPrimary),
                 shadowElevation = 4.dp
             ) {
-                Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(20.dp).background(Color(0xFFFFD54F), CircleShape))
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = 12.dp,
+                        vertical = 6.dp
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .background(
+                                Color(0xFFFFD54F),
+                                CircleShape
+                            )
+                    )
+
                     Spacer(Modifier.width(6.dp))
-                    Text(text = "Larissa", color = RedPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+
+                    Text(
+                        text = nomeCurto,
+                        color = RedPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
-            Surface(shape = RoundedCornerShape(20.dp), color = Color.White, border = BorderStroke(1.dp, RedPrimary), shadowElevation = 4.dp) {
-                Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("10", fontWeight = FontWeight.Bold, color = Color.Gray); Spacer(Modifier.width(4.dp))
-                    Icon(Icons.Filled.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(18.dp))
+
+            Spacer(Modifier.width(12.dp))
+
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, RedPrimary),
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = 12.dp,
+                        vertical = 6.dp
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Pontuação de exemplo, ainda sem integração.
+                    Text(
+                        text = "10",
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+
+                    Spacer(Modifier.width(4.dp))
+
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Estrelas",
+                        tint = Color(0xFFFFC107),
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
