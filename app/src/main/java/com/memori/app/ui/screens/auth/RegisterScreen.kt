@@ -6,16 +6,27 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -39,8 +50,47 @@ fun RegisterScreen(
     var agreeTerms by remember { mutableStateOf(false) }
 
     val authState by viewModel.authState.collectAsState()
-    val context = LocalContext.current
     val loading = authState is AuthState.Loading
+
+    val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
+
+    val nomeFocus = remember { FocusRequester() }
+    val emailFocus = remember { FocusRequester() }
+    val usuarioFocus = remember { FocusRequester() }
+    val senhaFocus = remember { FocusRequester() }
+
+    fun cadastrar() {
+        if (loading) return
+
+        if (!agreeTerms) {
+            Toast.makeText(
+                context,
+                "Aceite os termos de uso",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            return
+        }
+
+        focusManager.clearFocus()
+
+        viewModel.register(
+            email = email,
+            pass = password,
+            name = name,
+            username = username,
+            onSuccess = {
+                Toast.makeText(
+                    context,
+                    "Conta criada! Entre com seu e-mail e senha.",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                onNavigateToLogin()
+            }
+        )
+    }
 
     LaunchedEffect(authState) {
         val erro = authState as? AuthState.Error
@@ -66,7 +116,9 @@ fun RegisterScreen(
                 .size(100.dp)
                 .offset(x = (-20).dp, y = (-20).dp)
                 .clip(CircleShape)
-                .background(Color(0xFFFFD54F).copy(alpha = 0.5f))
+                .background(
+                    Color(0xFFFFD54F).copy(alpha = 0.5f)
+                )
         )
 
         Box(
@@ -75,7 +127,9 @@ fun RegisterScreen(
                 .align(Alignment.TopEnd)
                 .offset(x = 20.dp, y = (-30).dp)
                 .clip(CircleShape)
-                .background(Color(0xFF81C784).copy(alpha = 0.5f))
+                .background(
+                    Color(0xFF81C784).copy(alpha = 0.5f)
+                )
         )
 
         Box(
@@ -83,7 +137,9 @@ fun RegisterScreen(
                 .size(80.dp)
                 .offset(x = 100.dp, y = 200.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF4DB6AC).copy(alpha = 0.3f))
+                .background(
+                    Color(0xFF4DB6AC).copy(alpha = 0.3f)
+                )
         )
 
         Column(
@@ -94,7 +150,7 @@ fun RegisterScreen(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(60.dp))
+            Spacer(Modifier.height(60.dp))
 
             Text(
                 text = "Cadastro",
@@ -103,13 +159,18 @@ fun RegisterScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(Modifier.height(40.dp))
 
             RegistrationField(
                 label = "Nome completo:",
                 value = name,
                 placeholder = "Digite o seu nome completo",
                 enabled = !loading,
+                modifier = Modifier
+                    .focusRequester(nomeFocus)
+                    .focusProperties {
+                        next = emailFocus
+                    },
                 onValueChange = { name = it }
             )
 
@@ -119,6 +180,12 @@ fun RegisterScreen(
                 placeholder = "Digite o seu e-mail",
                 keyboardType = KeyboardType.Email,
                 enabled = !loading,
+                modifier = Modifier
+                    .focusRequester(emailFocus)
+                    .focusProperties {
+                        previous = nomeFocus
+                        next = usuarioFocus
+                    },
                 onValueChange = { email = it }
             )
 
@@ -127,6 +194,12 @@ fun RegisterScreen(
                 value = username,
                 placeholder = "Digite o seu usuário",
                 enabled = !loading,
+                modifier = Modifier
+                    .focusRequester(usuarioFocus)
+                    .focusProperties {
+                        previous = emailFocus
+                        next = senhaFocus
+                    },
                 onValueChange = { username = it }
             )
 
@@ -136,6 +209,12 @@ fun RegisterScreen(
                 placeholder = "Mínimo de 8 caracteres",
                 isPassword = true,
                 enabled = !loading,
+                imeAction = ImeAction.Done,
+                modifier = Modifier
+                    .focusRequester(senhaFocus)
+                    .focusProperties {
+                        previous = usuarioFocus
+                    },
                 onValueChange = { password = it }
             )
 
@@ -147,7 +226,9 @@ fun RegisterScreen(
             ) {
                 RadioButton(
                     selected = agreeTerms,
-                    onClick = { agreeTerms = !agreeTerms },
+                    onClick = {
+                        agreeTerms = !agreeTerms
+                    },
                     enabled = !loading,
                     colors = RadioButtonDefaults.colors(
                         selectedColor = RedPrimary
@@ -161,34 +242,10 @@ fun RegisterScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
 
             Button(
-                onClick = {
-                    if (!agreeTerms) {
-                        Toast.makeText(
-                            context,
-                            "Aceite os termos de uso",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        viewModel.register(
-                            email = email,
-                            pass = password,
-                            name = name,
-                            username = username,
-                            onSuccess = {
-                                Toast.makeText(
-                                    context,
-                                    "Conta criada! Entre com seu e-mail e senha.",
-                                    Toast.LENGTH_LONG
-                                ).show()
-
-                                onNavigateToLogin()
-                            }
-                        )
-                    }
-                },
+                onClick = { cadastrar() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -212,7 +269,7 @@ fun RegisterScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
             TextButton(
                 onClick = onNavigateToLogin,
@@ -226,7 +283,7 @@ fun RegisterScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(Modifier.height(32.dp))
 
             Row(
                 modifier = Modifier.padding(bottom = 16.dp)
@@ -274,8 +331,22 @@ fun RegistrationField(
     isPassword: Boolean = false,
     enabled: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
+    modifier: Modifier = Modifier,
+    imeAction: ImeAction = ImeAction.Next,
     onValueChange: (String) -> Unit
 ) {
+    var senhaVisivel by remember {
+        mutableStateOf(false)
+    }
+
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(enabled) {
+        if (!enabled) {
+            senhaVisivel = false
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -293,7 +364,25 @@ fun RegistrationField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier
+                .fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (event.key == Key.Tab) {
+                        if (event.type == KeyEventType.KeyDown) {
+                            focusManager.moveFocus(
+                                if (event.isShiftPressed) {
+                                    FocusDirection.Previous
+                                } else {
+                                    FocusDirection.Next
+                                }
+                            )
+                        }
+
+                        true
+                    } else {
+                        false
+                    }
+                },
             placeholder = {
                 Text(
                     text = placeholder,
@@ -303,19 +392,63 @@ fun RegistrationField(
             },
             shape = RoundedCornerShape(26.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = RedPrimary.copy(alpha = 0.5f),
+                unfocusedBorderColor = RedPrimary.copy(
+                    alpha = 0.5f
+                ),
                 focusedBorderColor = RedPrimary
             ),
-            visualTransformation = if (isPassword) {
+            visualTransformation = if (
+                isPassword && !senhaVisivel
+            ) {
                 PasswordVisualTransformation()
             } else {
                 VisualTransformation.None
+            },
+            trailingIcon = if (isPassword) {
+                {
+                    IconButton(
+                        onClick = {
+                            senhaVisivel = !senhaVisivel
+                        },
+                        enabled = enabled,
+                        modifier = Modifier.focusProperties {
+                            canFocus = false
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (senhaVisivel) {
+                                Icons.Default.VisibilityOff
+                            } else {
+                                Icons.Default.Visibility
+                            },
+                            contentDescription = if (senhaVisivel) {
+                                "Ocultar senha"
+                            } else {
+                                "Mostrar senha"
+                            },
+                            tint = RedPrimary
+                        )
+                    }
+                }
+            } else {
+                null
             },
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (isPassword) {
                     KeyboardType.Password
                 } else {
                     keyboardType
+                },
+                imeAction = imeAction
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = {
+                    focusManager.moveFocus(
+                        FocusDirection.Next
+                    )
+                },
+                onDone = {
+                    focusManager.clearFocus()
                 }
             ),
             singleLine = true,
