@@ -1,0 +1,66 @@
+name: CI Android
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Analisar e compilar Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Instalar SDK do projeto
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Limpar arquivos gerados anteriormente
+        run: bash ./gradlew clean --no-daemon
+
+      - name: Analisar codigo Android
+        run: bash ./gradlew :app:lintDebug --no-daemon --stacktrace
+
+      - name: Gerar APK de desenvolvimento
+        run: bash ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Disponibilizar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: memori-debug-${{ github.run_number }}
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Disponibilizar relatorios de analise
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lint-${{ github.run_number }}
+          path: app/build/reports/lint-results-debug.*
+          if-no-files-found: ignore
+          retention-days: 7
