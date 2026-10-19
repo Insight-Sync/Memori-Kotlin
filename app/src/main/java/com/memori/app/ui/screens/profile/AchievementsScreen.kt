@@ -14,15 +14,17 @@ import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.theme.RedPrimary
 import kotlinx.coroutines.launch
 
@@ -37,13 +39,45 @@ data class Achievement(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AchievementsScreen() {
-    val achievements = listOf(
-        Achievement("Lanternas Brilhantes", "#02 Lugar", "00:30:40 h", "🏮", Color(0xFFFF5252)),
-        Achievement("Mestre dos Origami", "#01 Lugar", "00:15:20 h", "🦢", Color(0xFF4CAF50)),
-        Achievement("Explorador KKKK", "#05 Lugar", "01:10:00 h", "🏛️", Color(0xFFFFC107))
+    val viewModel = LocalAuthViewModel.current
+    val usuario by viewModel.usuario.collectAsState()
+
+    val nomeCurto = usuario?.nome
+        ?.trim()
+        ?.substringBefore(" ")
+        ?.takeIf { it.isNotBlank() }
+        ?: "Perfil"
+
+    // Conquistas de exemplo: serão integradas à API depois.
+    val achievements = remember {
+        listOf(
+            Achievement(
+                "Lanternas Brilhantes",
+                "#02 Lugar",
+                "00:30:40 h",
+                "🏮",
+                Color(0xFFFF5252)
+            ),
+            Achievement(
+                "Mestre dos Origami",
+                "#01 Lugar",
+                "00:15:20 h",
+                "🦢",
+                Color(0xFF4CAF50)
+            ),
+            Achievement(
+                "Explorador KKKK",
+                "#05 Lugar",
+                "01:10:00 h",
+                "🏛️",
+                Color(0xFFFFC107)
+            )
+        )
+    }
+
+    val pagerState = rememberPagerState(
+        pageCount = { achievements.size }
     )
-    
-    val pagerState = rememberPagerState(pageCount = { achievements.size })
     val scope = rememberCoroutineScope()
 
     Column(
@@ -53,22 +87,25 @@ fun AchievementsScreen() {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // User Tag
             Surface(
+                modifier = Modifier.weight(1f, fill = false),
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
                 border = BorderStroke(1.dp, RedPrimary),
                 shadowElevation = 2.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(
+                        horizontal = 12.dp,
+                        vertical = 6.dp
+                    ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -80,19 +117,30 @@ fun AchievementsScreen() {
                         contentAlignment = Alignment.Center
                     ) {
                         Text("😑", fontSize = 12.sp)
-                        Text("💢", modifier = Modifier.align(Alignment.TopEnd), fontSize = 6.sp, color = Color.Red)
+
+                        Text(
+                            text = "💢",
+                            modifier = Modifier.align(Alignment.TopEnd),
+                            fontSize = 6.sp,
+                            color = Color.Red
+                        )
                     }
+
                     Spacer(Modifier.width(8.dp))
+
                     Text(
-                        "Larissa",
+                        text = nomeCurto,
                         color = RedPrimary,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            // Points Tag
+            Spacer(Modifier.width(12.dp))
+
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
@@ -100,14 +148,24 @@ fun AchievementsScreen() {
                 shadowElevation = 2.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(
+                        horizontal = 12.dp,
+                        vertical = 6.dp
+                    ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("10", color = Color.Gray, fontWeight = FontWeight.Bold)
+                    // Pontuação de exemplo.
+                    Text(
+                        text = "10",
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Bold
+                    )
+
                     Spacer(Modifier.width(4.dp))
+
                     Icon(
-                        Icons.Filled.Star,
-                        null,
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Estrelas",
                         tint = Color(0xFFFFC107),
                         modifier = Modifier.size(18.dp)
                     )
@@ -115,7 +173,7 @@ fun AchievementsScreen() {
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(Modifier.height(32.dp))
 
         Text(
             text = "Minhas conquistas",
@@ -124,63 +182,99 @@ fun AchievementsScreen() {
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Pager with navigation buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterEnd
+            ) {
                 IconButton(
                     onClick = {
                         if (pagerState.currentPage > 0) {
-                            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
+                            scope.launch {
+                                pagerState.animateScrollToPage(
+                                    pagerState.currentPage - 1
+                                )
+                            }
                         }
                     },
                     enabled = pagerState.currentPage > 0
                 ) {
-                    Icon(Icons.Default.ArrowBackIosNew, null, tint = if (pagerState.currentPage > 0) RedPrimary else Color.LightGray)
+                    Icon(
+                        imageVector = Icons.Default.ArrowBackIosNew,
+                        contentDescription = "Conquista anterior",
+                        tint = if (pagerState.currentPage > 0) {
+                            RedPrimary
+                        } else {
+                            Color.LightGray
+                        }
+                    )
                 }
             }
 
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.width(280.dp).height(450.dp)
+                modifier = Modifier
+                    .width(280.dp)
+                    .height(450.dp)
             ) { page ->
-                val achievement = achievements[page]
-                AchievementCard(achievement)
+                AchievementCard(achievements[page])
             }
 
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart
+            ) {
                 IconButton(
                     onClick = {
-                        if (pagerState.currentPage < achievements.size - 1) {
-                            scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                        if (pagerState.currentPage < achievements.lastIndex) {
+                            scope.launch {
+                                pagerState.animateScrollToPage(
+                                    pagerState.currentPage + 1
+                                )
+                            }
                         }
                     },
-                    enabled = pagerState.currentPage < achievements.size - 1
+                    enabled = pagerState.currentPage < achievements.lastIndex
                 ) {
-                    Icon(Icons.Default.ArrowForwardIos, null, tint = if (pagerState.currentPage < achievements.size - 1) RedPrimary else Color.LightGray)
+                    Icon(
+                        imageVector = Icons.Default.ArrowForwardIos,
+                        contentDescription = "Próxima conquista",
+                        tint = if (
+                            pagerState.currentPage < achievements.lastIndex
+                        ) {
+                            RedPrimary
+                        } else {
+                            Color.LightGray
+                        }
+                    )
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Page Indicators
+
+        Spacer(Modifier.height(16.dp))
+
         Row(
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
         ) {
-            repeat(achievements.size) { iteration ->
-                val color = if (pagerState.currentPage == iteration) RedPrimary else Color.LightGray
+            repeat(achievements.size) { index ->
+                val cor = if (pagerState.currentPage == index) {
+                    RedPrimary
+                } else {
+                    Color.LightGray
+                }
+
                 Box(
                     modifier = Modifier
                         .padding(4.dp)
-                        .clip(CircleShape)
-                        .background(color)
                         .size(8.dp)
+                        .clip(CircleShape)
+                        .background(cor)
                 )
             }
         }
@@ -190,11 +284,20 @@ fun AchievementsScreen() {
 @Composable
 fun AchievementCard(achievement: Achievement) {
     Card(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 4.dp),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 8.dp
+        ),
+        border = BorderStroke(
+            1.dp,
+            Color.LightGray.copy(alpha = 0.3f)
+        )
     ) {
         Column(
             modifier = Modifier
@@ -203,15 +306,14 @@ fun AchievementCard(achievement: Achievement) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Stars
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 repeat(3) {
                     Icon(
-                        Icons.Filled.Star,
-                        null,
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = null,
                         tint = Color(0xFFFFD54F),
                         modifier = Modifier.size(32.dp)
                     )
@@ -222,33 +324,41 @@ fun AchievementCard(achievement: Achievement) {
                 text = achievement.title,
                 color = Color(0xFF666666),
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center
             )
 
-            // Illustration
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                // Moon/Circle sketch
                 Box(
                     modifier = Modifier
                         .size(140.dp)
-                        .background(achievement.color.copy(alpha = 0.1f), CircleShape)
+                        .background(
+                            achievement.color.copy(alpha = 0.1f),
+                            CircleShape
+                        )
                 )
-                
-                Text(achievement.emoji, fontSize = 80.sp)
+
+                Text(
+                    text = achievement.emoji,
+                    fontSize = 80.sp
+                )
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
                     text = achievement.rank,
                     color = RedPrimary,
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold
                 )
+
                 Text(
                     text = achievement.time,
                     color = Color.LightGray,

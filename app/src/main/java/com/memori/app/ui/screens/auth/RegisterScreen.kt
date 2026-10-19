@@ -1,25 +1,31 @@
 package com.memori.app.ui.screens.auth
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.memori.app.ui.theme.RedPrimary
 import androidx.lifecycle.viewmodel.compose.viewModel
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
+import com.memori.app.ui.theme.RedPrimary
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
@@ -34,10 +40,18 @@ fun RegisterScreen(
 
     val authState by viewModel.authState.collectAsState()
     val context = LocalContext.current
+    val loading = authState is AuthState.Loading
 
     LaunchedEffect(authState) {
-        if (authState is AuthState.Error) {
-            Toast.makeText(context, (authState as AuthState.Error).message, Toast.LENGTH_SHORT).show()
+        val erro = authState as? AuthState.Error
+
+        if (erro != null) {
+            Toast.makeText(
+                context,
+                erro.message,
+                Toast.LENGTH_LONG
+            ).show()
+
             viewModel.resetState()
         }
     }
@@ -47,7 +61,6 @@ fun RegisterScreen(
             .fillMaxSize()
             .background(Color(0xFFF9F9F9))
     ) {
-        // Simulating Top Illustrations
         Box(
             modifier = Modifier
                 .size(100.dp)
@@ -55,6 +68,7 @@ fun RegisterScreen(
                 .clip(CircleShape)
                 .background(Color(0xFFFFD54F).copy(alpha = 0.5f))
         )
+
         Box(
             modifier = Modifier
                 .size(120.dp)
@@ -63,6 +77,7 @@ fun RegisterScreen(
                 .clip(CircleShape)
                 .background(Color(0xFF81C784).copy(alpha = 0.5f))
         )
+
         Box(
             modifier = Modifier
                 .size(80.dp)
@@ -74,6 +89,8 @@ fun RegisterScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -88,27 +105,57 @@ fun RegisterScreen(
 
             Spacer(modifier = Modifier.height(40.dp))
 
-            // Form Fields
-            RegistrationField("Nome completo:", name, "Digite o seu nome completo", enabled = authState !is AuthState.Loading) { name = it }
-            RegistrationField("E-mail:", email, "Digite o seu e-mail", enabled = authState !is AuthState.Loading) { email = it }
-            RegistrationField("Usuário:", username, "Digite o seu usuário", enabled = authState !is AuthState.Loading) { username = it }
-            RegistrationField("Senha:", password, "Digite a sua senha", isPassword = true, enabled = authState !is AuthState.Loading) { password = it }
+            RegistrationField(
+                label = "Nome completo:",
+                value = name,
+                placeholder = "Digite o seu nome completo",
+                enabled = !loading,
+                onValueChange = { name = it }
+            )
 
-            // Terms Checkbox
+            RegistrationField(
+                label = "E-mail:",
+                value = email,
+                placeholder = "Digite o seu e-mail",
+                keyboardType = KeyboardType.Email,
+                enabled = !loading,
+                onValueChange = { email = it }
+            )
+
+            RegistrationField(
+                label = "Usuário:",
+                value = username,
+                placeholder = "Digite o seu usuário",
+                enabled = !loading,
+                onValueChange = { username = it }
+            )
+
+            RegistrationField(
+                label = "Senha:",
+                value = password,
+                placeholder = "Mínimo de 8 caracteres",
+                isPassword = true,
+                enabled = !loading,
+                onValueChange = { password = it }
+            )
+
             Row(
-                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = agreeTerms,
-                    onClick = { if (authState !is AuthState.Loading) agreeTerms = !agreeTerms },
-                    colors = RadioButtonDefaults.colors(selectedColor = RedPrimary),
-                    enabled = authState !is AuthState.Loading
+                    onClick = { agreeTerms = !agreeTerms },
+                    enabled = !loading,
+                    colors = RadioButtonDefaults.colors(
+                        selectedColor = RedPrimary
+                    )
                 )
+
                 Text(
-                    "Concordo com os termos de uso",
+                    text = "Concordo com os termos de uso",
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -118,50 +165,102 @@ fun RegisterScreen(
 
             Button(
                 onClick = {
-                    if (name.isNotEmpty() && email.isNotEmpty() && username.isNotEmpty() && password.isNotEmpty()) {
-                        if (agreeTerms) {
-                            viewModel.register(email, password, name, onNavigateToHome)
-                        } else {
-                            Toast.makeText(context, "Aceite os termos de uso", Toast.LENGTH_SHORT).show()
-                        }
+                    if (!agreeTerms) {
+                        Toast.makeText(
+                            context,
+                            "Aceite os termos de uso",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     } else {
-                        Toast.makeText(context, "Preencha todos os campos", Toast.LENGTH_SHORT).show()
+                        viewModel.register(
+                            email = email,
+                            pass = password,
+                            name = name,
+                            username = username,
+                            onSuccess = {
+                                Toast.makeText(
+                                    context,
+                                    "Conta criada! Entre com seu e-mail e senha.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+
+                                onNavigateToLogin()
+                            }
+                        )
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = RedPrimary),
-                shape = RoundedCornerShape(28.dp),
-                enabled = authState !is AuthState.Loading
+                enabled = !loading,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = RedPrimary
+                ),
+                shape = RoundedCornerShape(28.dp)
             ) {
-                if (authState is AuthState.Loading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                if (loading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
-                    Text("Cadastrar", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Cadastrar",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            TextButton(onClick = onNavigateToLogin) {
+            TextButton(
+                onClick = onNavigateToLogin,
+                enabled = !loading
+            ) {
                 Text(
-                    "Já tenho uma conta!",
+                    text = "Já tenho uma conta!",
                     color = RedPrimary,
                     textDecoration = TextDecoration.Underline,
                     fontSize = 14.sp
                 )
             }
-            
-            Spacer(modifier = Modifier.weight(1f))
-            
-            // Bottom Logo Placeholder
-            Row(modifier = Modifier.padding(bottom = 16.dp)) {
-                Box(Modifier.size(20.dp).background(Color(0xFFFF5252), RoundedCornerShape(2.dp)))
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Row(
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Box(
+                    Modifier
+                        .size(20.dp)
+                        .background(
+                            Color(0xFFFF5252),
+                            RoundedCornerShape(2.dp)
+                        )
+                )
+
                 Spacer(Modifier.width(4.dp))
-                Box(Modifier.size(20.dp).background(Color(0xFFFFC107), RoundedCornerShape(2.dp)))
+
+                Box(
+                    Modifier
+                        .size(20.dp)
+                        .background(
+                            Color(0xFFFFC107),
+                            RoundedCornerShape(2.dp)
+                        )
+                )
+
                 Spacer(Modifier.width(4.dp))
-                Box(Modifier.size(20.dp).background(Color(0xFF4CAF50), RoundedCornerShape(2.dp)))
+
+                Box(
+                    Modifier
+                        .size(20.dp)
+                        .background(
+                            Color(0xFF4CAF50),
+                            RoundedCornerShape(2.dp)
+                        )
+                )
             }
         }
     }
@@ -174,28 +273,51 @@ fun RegistrationField(
     placeholder: String,
     isPassword: Boolean = false,
     enabled: Boolean = true,
+    keyboardType: KeyboardType = KeyboardType.Text,
     onValueChange: (String) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    ) {
         Text(
             text = label,
             color = RedPrimary,
             fontSize = 14.sp,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 4.dp)
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(bottom = 4.dp)
         )
+
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            placeholder = { Text(placeholder, fontSize = 12.sp, color = Color.LightGray) },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = placeholder,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            },
             shape = RoundedCornerShape(26.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 unfocusedBorderColor = RedPrimary.copy(alpha = 0.5f),
                 focusedBorderColor = RedPrimary
             ),
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+            visualTransformation = if (isPassword) {
+                PasswordVisualTransformation()
+            } else {
+                VisualTransformation.None
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = if (isPassword) {
+                    KeyboardType.Password
+                } else {
+                    keyboardType
+                }
+            ),
             singleLine = true,
             enabled = enabled
         )

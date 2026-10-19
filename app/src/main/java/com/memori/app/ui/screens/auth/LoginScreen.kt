@@ -44,7 +44,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Usuário:",
+            text = "E-mail:",
             modifier = Modifier.fillMaxWidth(),
             style = MaterialTheme.typography.bodyLarge
         )
@@ -52,7 +52,7 @@ fun LoginScreen(
             value = email,
             onValueChange = { email = it },
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-            placeholder = { Text("Digite o seu usuário") },
+            placeholder = { Text("Digite o seu e-mail") },
             enabled = authState !is AuthState.Loading
         )
 
