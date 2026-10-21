@@ -50,6 +50,18 @@ class AuthViewModel(
     private val _perfilErro = MutableStateFlow<String?>(null)
     val perfilErro: StateFlow<String?> = _perfilErro
 
+    private val _avatarSalvando = MutableStateFlow(false)
+    val avatarSalvando: StateFlow<Boolean> = _avatarSalvando
+
+    private val _avatarErro = MutableStateFlow<String?>(null)
+    val avatarErro: StateFlow<String?> = _avatarErro
+
+    private val avataresPermitidos = setOf(
+        "amarelo",
+        "azul",
+        "vermelho"
+    )
+
     init {
         viewModelScope.launch {
             try {
@@ -98,13 +110,25 @@ class AuthViewModel(
                     "A API não retornou um token válido."
                 }
 
+                // O perfil completo contém o avatar salvo no banco.
+                val perfil = ApiClient.authApi.buscarPerfil(
+                    id = resposta.usuario.id,
+                    authorization = "Bearer ${resposta.token}"
+                )
+
+                check(perfil.usuario.id == resposta.usuario.id) {
+                    "A API retornou um perfil inválido."
+                }
+
                 withContext(Dispatchers.IO) {
                     sessionStore.salvar(resposta.token)
                 }
 
                 _sessionToken.value = resposta.token
-                _usuario.value = resposta.usuario
+                _usuario.value = perfil.usuario
                 _perfilErro.value = null
+                _avatarErro.value = null
+                _avatarSalvando.value = false
 
                 _authState.value = AuthState.Success(
                     "Login realizado!"
@@ -183,7 +207,8 @@ class AuthViewModel(
 
     fun atualizarPerfil() {
         val token = _sessionToken.value ?: return
-        if (_perfilLoading.value) return
+
+        if (_perfilLoading.value || _avatarSalvando.value) return
         if (_authState.value is AuthState.Loading) return
 
         viewModelScope.launch {
@@ -199,8 +224,6 @@ class AuthViewModel(
             val partes = token.split(".")
             require(partes.size == 3)
 
-            // O ID identifica a consulta.
-            // A API valida a assinatura do token recebido.
             val payload = Base64.decode(
                 partes[1],
                 Base64.URL_SAFE or Base64.NO_WRAP
@@ -213,7 +236,6 @@ class AuthViewModel(
                 authorization = "Bearer $token"
             )
 
-            // Evita aplicar uma resposta de uma sessão já encerrada.
             if (_sessionToken.value == token) {
                 _usuario.value = resposta.usuario
             }
@@ -234,6 +256,66 @@ class AuthViewModel(
             }
         } finally {
             _perfilLoading.value = false
+        }
+    }
+
+    fun selecionarAvatar(avatar: String) {
+        val token = _sessionToken.value ?: return
+        val pessoa = _usuario.value ?: return
+
+        if (_avatarSalvando.value || _perfilLoading.value) return
+        if (_authState.value is AuthState.Loading) return
+
+        if (avatar !in avataresPermitidos) {
+            _avatarErro.value = "Escolha um avatar válido."
+            return
+        }
+
+        if (avatar == (pessoa.avatar ?: "amarelo")) return
+
+        _avatarSalvando.value = true
+        _avatarErro.value = null
+
+        viewModelScope.launch {
+            try {
+                val resposta = ApiClient.authApi.atualizarAvatar(
+                    authorization = "Bearer $token",
+                    dados = AvatarRequest(avatar)
+                )
+
+                check(resposta.usuario.id == pessoa.id) {
+                    "A API retornou um perfil inválido."
+                }
+
+                check(resposta.usuario.avatar == avatar) {
+                    "A API não confirmou o avatar escolhido."
+                }
+
+                // Só altera a imagem depois da confirmação do servidor.
+                if (_sessionToken.value == token) {
+                    _usuario.value = resposta.usuario
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: HttpException) {
+                if (_sessionToken.value == token) {
+                    if (error.code() in listOf(401, 403, 404)) {
+                        encerrarSessao()
+                    } else {
+                        _avatarErro.value = mensagemErro(error)
+                    }
+                }
+            } catch (error: Exception) {
+                if (_sessionToken.value == token) {
+                    _avatarErro.value =
+                        "Não foi possível confirmar o salvamento. " +
+                                "Confira a conexão e tente novamente."
+                }
+            } finally {
+                if (_sessionToken.value == token) {
+                    _avatarSalvando.value = false
+                }
+            }
         }
     }
 
@@ -266,6 +348,8 @@ class AuthViewModel(
         _sessionToken.value = null
         _usuario.value = null
         _perfilErro.value = null
+        _avatarErro.value = null
+        _avatarSalvando.value = false
         _authState.value = AuthState.Idle
     }
 

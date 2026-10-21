@@ -1,6 +1,7 @@
 package com.memori.app.ui.screens.profile
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -16,13 +17,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.memori.app.R
 import com.memori.app.ui.screens.auth.AuthState
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.theme.RedPrimary
@@ -35,13 +38,30 @@ fun ProfileScreen(onLogout: () -> Unit) {
     val loading by viewModel.perfilLoading.collectAsState()
     val erroPerfil by viewModel.perfilErro.collectAsState()
     val authState by viewModel.authState.collectAsState()
+    val salvandoAvatar by viewModel.avatarSalvando.collectAsState()
+    val erroAvatar by viewModel.avatarErro.collectAsState()
+
+    val avatares = listOf("amarelo", "azul", "vermelho")
+    val indiceAvatar = avatares.indexOf(usuario?.avatar)
+        .takeIf { it >= 0 } ?: 0
+    val avatarAtual = avatares[indiceAvatar]
 
     val saindo = authState is AuthState.Loading
+    val podeTrocarAvatar =
+        usuario != null && !loading && !salvandoAvatar && !saindo
+
     val nomeCurto = usuario?.nome
         ?.trim()
         ?.substringBefore(" ")
         ?.takeIf { it.isNotBlank() }
         ?: "Perfil"
+
+    fun trocarAvatar(direcao: Int) {
+        val novoIndice =
+            (indiceAvatar + direcao + avatares.size) % avatares.size
+
+        viewModel.selecionarAvatar(avatares[novoIndice])
+    }
 
     Column(
         modifier = Modifier
@@ -49,7 +69,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
             .background(Color(0xFFF9F9F9))
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
-            .padding(bottom = 190.dp),
+            .padding(bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -73,16 +93,10 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFFFEB3B))
-                            .border(1.dp, RedPrimary, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("😑", fontSize = 12.sp)
-                    }
+                    AvatarImagem(
+                        avatar = avatarAtual,
+                        modifier = Modifier.size(24.dp)
+                    )
 
                     Spacer(Modifier.width(8.dp))
 
@@ -112,7 +126,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Pontuação de exemplo, ainda sem integração.
+                    // Pontuação aguardando a definição do grupo.
                     Text(
                         text = "10",
                         color = Color.Gray,
@@ -157,7 +171,10 @@ fun ProfileScreen(onLogout: () -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 32.dp, horizontal = 16.dp),
+                    .padding(
+                        vertical = 32.dp,
+                        horizontal = 16.dp
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
@@ -166,51 +183,70 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     horizontalArrangement = Arrangement.Center
                 ) {
                     IconButton(
-                        onClick = {},
-                        enabled = false
+                        onClick = { trocarAvatar(-1) },
+                        enabled = podeTrocarAvatar
                     ) {
                         Icon(
                             imageVector = Icons.Default.ArrowBackIos,
                             contentDescription = "Avatar anterior",
-                            tint = Color.LightGray
+                            tint = if (podeTrocarAvatar) {
+                                RedPrimary
+                            } else {
+                                Color.LightGray
+                            }
                         )
                     }
 
                     Box(
                         modifier = Modifier
-                            .size(180.dp)
+                            .weight(1f)
+                            .widthIn(max = 180.dp)
+                            .aspectRatio(1f)
                             .border(4.dp, RedPrimary, CircleShape)
-                            .padding(12.dp),
+                            .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(120.dp)
-                                .background(Color(0xFFFFD54F)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("😑", fontSize = 80.sp)
-
-                            Text(
-                                text = "💢",
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(4.dp),
-                                fontSize = 24.sp
-                            )
-                        }
+                        AvatarImagem(
+                            avatar = avatarAtual,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
                     IconButton(
-                        onClick = {},
-                        enabled = false
+                        onClick = { trocarAvatar(1) },
+                        enabled = podeTrocarAvatar
                     ) {
                         Icon(
                             imageVector = Icons.Default.ArrowForwardIos,
                             contentDescription = "Próximo avatar",
-                            tint = Color.LightGray
+                            tint = if (podeTrocarAvatar) {
+                                RedPrimary
+                            } else {
+                                Color.LightGray
+                            }
                         )
                     }
+                }
+
+                if (salvandoAvatar) {
+                    Spacer(Modifier.height(12.dp))
+
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = RedPrimary
+                    )
+                }
+
+                erroAvatar?.let { mensagem ->
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = mensagem,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        fontSize = 13.sp
+                    )
                 }
 
                 Spacer(Modifier.height(24.dp))
@@ -239,15 +275,6 @@ fun ProfileScreen(onLogout: () -> Unit) {
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center
                     )
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Text(
-                        text = pessoa.emailUsuario,
-                        color = Color.Gray,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center
-                    )
                 }
 
                 erroPerfil?.let { mensagem ->
@@ -261,19 +288,17 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                     TextButton(
                         onClick = { viewModel.atualizarPerfil() },
-                        enabled = !loading && !saindo
+                        enabled = !loading && !saindo && !salvandoAvatar
                     ) {
                         Text("Tentar novamente")
                     }
                 }
 
-                val erroAuth = authState as? AuthState.Error
-
-                erroAuth?.let {
+                (authState as? AuthState.Error)?.let { erro ->
                     Spacer(Modifier.height(12.dp))
 
                     Text(
-                        text = it.message,
+                        text = erro.message,
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center
                     )
@@ -283,7 +308,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                 Button(
                     onClick = onLogout,
-                    enabled = !saindo,
+                    enabled = !saindo && !salvandoAvatar,
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .height(56.dp),
@@ -309,4 +334,23 @@ fun ProfileScreen(onLogout: () -> Unit) {
             }
         }
     }
+}
+
+@Composable
+fun AvatarImagem(
+    avatar: String?,
+    modifier: Modifier = Modifier
+) {
+    val imagem = when (avatar) {
+        "azul" -> R.drawable.avatar_azul
+        "vermelho" -> R.drawable.avatar_vermelho
+        else -> R.drawable.avatar_amarelo
+    }
+
+    Image(
+        painter = painterResource(id = imagem),
+        contentDescription = "Avatar ${avatar ?: "amarelo"}",
+        modifier = modifier,
+        contentScale = ContentScale.Fit
+    )
 }

@@ -6,6 +6,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 
@@ -21,12 +22,17 @@ data class RegisterRequest(
     val senhaUsuario: String
 )
 
+data class AvatarRequest(
+    val avatar: String
+)
+
 data class UsuarioResponse(
     @SerializedName(value = "id", alternate = ["_id"])
     val id: String,
     val nome: String,
     val nomeUsuario: String,
-    val emailUsuario: String
+    val emailUsuario: String,
+    val avatar: String? = null
 )
 
 data class LoginResponse(
@@ -58,6 +64,12 @@ interface AuthApi {
     suspend fun buscarPerfil(
         @Path("id") id: String,
         @Header("Authorization") authorization: String
+    ): PerfilResponse
+
+    @PATCH("api/usuario/me/avatar")
+    suspend fun atualizarAvatar(
+        @Header("Authorization") authorization: String,
+        @Body dados: AvatarRequest
     ): PerfilResponse
 }
 
