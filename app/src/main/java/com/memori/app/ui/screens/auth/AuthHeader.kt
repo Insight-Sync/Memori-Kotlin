@@ -42,39 +42,33 @@ fun AuthHeader(
     ) {
         if (cadastro) {
             Image(
-                painter = painterResource(
-                    id = R.drawable.bola_amarela_textura
-                ),
+                painter = painterResource(R.drawable.bola_amarela_textura),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(170.dp)
                     .align(Alignment.TopStart)
                     .offset(x = (-120).dp, y = (-30).dp)
+                    .size(170.dp)
             )
 
             Image(
-                painter = painterResource(
-                    id = R.drawable.bola_verde_textura
-                ),
+                painter = painterResource(R.drawable.bola_verde_textura),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(170.dp)
                     .align(Alignment.TopEnd)
                     .offset(x = (-12).dp, y = (-45).dp)
+                    .size(170.dp)
             )
 
             Image(
-                painter = painterResource(
-                    id = R.drawable.bola_azul_textura
-                ),
+                painter = painterResource(R.drawable.bola_azul_textura),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(130.dp)
                     .align(Alignment.BottomStart)
                     .offset(x = 80.dp, y = 55.dp)
+                    .size(130.dp)
             )
 
             Text(
@@ -86,64 +80,58 @@ fun AuthHeader(
                     .offset(y = (-5).dp)
             )
         } else {
+            // Bola vermelha
             Image(
-                painter = painterResource(
-                    id = R.drawable.bola_vermelha_textura
-                ),
+                painter = painterResource(R.drawable.bola_vermelha_textura),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(150.dp)
                     .align(Alignment.TopStart)
-                    .offset(x = (-125).dp, y = 8.dp)
-            )
-
-            Image(
-                painter = painterResource(
-                    id = R.drawable.bola_amarela_textura
-                ),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .size(170.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-45).dp, y = (-45).dp)
-            )
-
-            Image(
-                painter = painterResource(
-                    id = R.drawable.bola_verde_textura
-                ),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
+                    .offset(x = (-92).dp, y = 8.dp)
                     .size(145.dp)
+            )
+            // Bola amarela
+            Image(
+                painter = painterResource(R.drawable.bola_amarela_textura),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 10.dp, y = (-45).dp)
+                    .size(145.dp)
+            )
+
+            // Bola verde
+            Image(
+                painter = painterResource(R.drawable.bola_verde_textura),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
                     .align(Alignment.BottomStart)
                     .offset(x = 46.dp, y = 55.dp)
+                    .size(145.dp)
             )
 
+            // Bola azul
             Image(
-                painter = painterResource(
-                    id = R.drawable.bola_azul_textura
-                ),
+                painter = painterResource(R.drawable.bola_azul_textura),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(105.dp)
                     .align(Alignment.BottomEnd)
-                    .offset(x = 80.dp, y = 32.dp)
+                    .offset(x = 30.dp, y = 25.dp)
+                    .size(145.dp)
             )
 
+            // MEMO centralizado, sem deslocamento horizontal.
             Image(
-                painter = painterResource(
-                    id = R.drawable.logo_rabiscado
-                ),
-                contentDescription = null,
+                painter = painterResource(R.drawable.logo_rabiscado),
+                contentDescription = "MEMORI",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(180.dp)
                     .align(Alignment.Center)
                     .offset(y = (-10).dp)
+                    .size(180.dp)
             )
         }
 
@@ -154,15 +142,18 @@ fun AuthHeader(
             val altura = size.height
 
             val curva = Path().apply {
-                moveTo(0f, altura * 0.88f)
+                moveTo(
+                    x = 0f,
+                    y = altura * 0.88f
+                )
 
                 cubicTo(
-                    largura * 0.12f,
-                    altura * 1.05f,
-                    largura * 0.70f,
-                    altura * 0.60f,
-                    largura,
-                    altura * 0.88f
+                    x1 = largura * 0.12f,
+                    y1 = altura * 1.05f,
+                    x2 = largura * 0.70f,
+                    y2 = altura * 0.60f,
+                    x3 = largura,
+                    y3 = altura * 0.88f
                 )
 
                 lineTo(largura, altura)
@@ -187,18 +178,19 @@ fun AuthHeader(
                 color = AuthBackground
             )
         }
-
         if (onVoltar != null) {
             IconButton(
                 onClick = onVoltar,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(8.dp)
+                    .padding(start = 12.dp, top = 8.dp)
+                    .size(48.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                Image(
+                    painter = painterResource(R.drawable.icon_voltar),
                     contentDescription = "Voltar para o login",
-                    tint = AuthCoral
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }

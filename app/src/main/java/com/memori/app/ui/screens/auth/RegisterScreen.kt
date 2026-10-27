@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -81,9 +82,7 @@ fun RegisterScreen(
             pass = password,
             name = name,
             username = username,
-            onSuccess = {
-                onCadastroConcluido()
-            }
+            onSuccess = onCadastroConcluido
         )
     }
 
@@ -118,7 +117,7 @@ fun RegisterScreen(
             }
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(0.dp))
 
         Column(
             modifier = Modifier
@@ -176,6 +175,7 @@ fun RegisterScreen(
                 isPassword = true,
                 enabled = !loading,
                 imeAction = ImeAction.Done,
+                bottomSpacing = 0.dp,
                 modifier = Modifier
                     .focusRequester(senhaFocus)
                     .focusProperties {
@@ -185,14 +185,14 @@ fun RegisterScreen(
             )
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
                     selected = agreeTerms,
-                    onClick = { agreeTerms = !agreeTerms },
+                    onClick = {
+                        agreeTerms = !agreeTerms
+                    },
                     enabled = !loading,
                     colors = RadioButtonDefaults.colors(
                         selectedColor = AuthCoral,
@@ -207,25 +207,23 @@ fun RegisterScreen(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
-
             Button(
                 onClick = { cadastrar() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp),
                 enabled = !loading,
+                shape = RoundedCornerShape(29.dp),
+                border = BorderStroke(3.dp, AuthPink),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = AuthCoral,
                     contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(29.dp),
-                border = BorderStroke(3.dp, AuthPink)
+                )
             ) {
                 if (loading) {
                     CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White
                     )
                 } else {
                     Text(
@@ -237,28 +235,30 @@ fun RegisterScreen(
 
             TextButton(
                 onClick = onNavigateToLogin,
-                enabled = !loading
+                enabled = !loading,
+                contentPadding = PaddingValues(
+                    horizontal = 8.dp,
+                    vertical = 0.dp
+                )
             ) {
                 Text(
                     text = "Já tenho uma conta!",
                     color = AuthCoral,
-                    textDecoration = TextDecoration.Underline,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Image(
-                painter = painterResource(
-                    id = R.drawable.logo_rabiscado
-                ),
-                contentDescription = null,
+                painter = painterResource(R.drawable.logo_rabiscado),
+                contentDescription = "MEMORI",
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(56.dp)
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -274,12 +274,10 @@ fun RegistrationField(
     modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Next,
     onDone: (() -> Unit)? = null,
+    bottomSpacing: Dp = 16.dp,
     onValueChange: (String) -> Unit
 ) {
-    var senhaVisivel by remember {
-        mutableStateOf(false)
-    }
-
+    var senhaVisivel by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(enabled) {
@@ -291,7 +289,7 @@ fun RegistrationField(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp)
+            .padding(bottom = bottomSpacing)
     ) {
         Text(
             text = label,
@@ -318,7 +316,6 @@ fun RegistrationField(
                                 }
                             )
                         }
-
                         true
                     } else {
                         false
@@ -343,9 +340,7 @@ fun RegistrationField(
                 unfocusedContainerColor = AuthBackground,
                 disabledContainerColor = AuthBackground
             ),
-            visualTransformation = if (
-                isPassword && !senhaVisivel
-            ) {
+            visualTransformation = if (isPassword && !senhaVisivel) {
                 PasswordVisualTransformation()
             } else {
                 VisualTransformation.None
@@ -389,9 +384,7 @@ fun RegistrationField(
             ),
             keyboardActions = KeyboardActions(
                 onNext = {
-                    focusManager.moveFocus(
-                        FocusDirection.Next
-                    )
+                    focusManager.moveFocus(FocusDirection.Next)
                 },
                 onDone = {
                     focusManager.clearFocus()
