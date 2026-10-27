@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.memori.app.ui.screens.auth.AuthViewModel
+import com.memori.app.ui.screens.auth.ConfirmationScreen
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.screens.auth.LoginScreen
 import com.memori.app.ui.screens.auth.RegisterScreen
@@ -26,11 +27,12 @@ import com.memori.app.ui.screens.trail.PuzzleScreen
 import com.memori.app.ui.screens.trail.RankingScreen
 import com.memori.app.ui.screens.trail.TrailStartScreen
 
+private const val CONFIRMATION_ROUTE = "confirmation"
+
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = viewModel()
-
     val context = LocalContext.current
 
     val modoDesenvolvimento =
@@ -43,11 +45,23 @@ fun AppNavigation() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val rotaAtual = backStackEntry?.destination?.route
 
+    fun voltarParaLogin() {
+        authViewModel.resetState()
+
+        navController.navigate(Screen.Login.route) {
+            popUpTo(navController.graph.id) {
+                inclusive = false
+            }
+            launchSingleTop = true
+        }
+    }
+
     LaunchedEffect(sessionReady, sessionToken, rotaAtual) {
         val rotasPublicas = setOf(
             Screen.Splash.route,
             Screen.Login.route,
-            Screen.Cadastro.route
+            Screen.Cadastro.route,
+            CONFIRMATION_ROUTE
         )
 
         if (
@@ -56,12 +70,7 @@ fun AppNavigation() {
             rotaAtual != null &&
             rotaAtual !in rotasPublicas
         ) {
-            navController.navigate(Screen.Login.route) {
-                popUpTo(navController.graph.id) {
-                    inclusive = false
-                }
-                launchSingleTop = true
-            }
+            voltarParaLogin()
         }
     }
 
@@ -130,14 +139,7 @@ fun AppNavigation() {
                 RegisterScreen(
                     viewModel = authViewModel,
                     onNavigateToLogin = {
-                        authViewModel.resetState()
-
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(Screen.Login.route) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
-                        }
+                        voltarParaLogin()
                     },
                     onNavigateToHome = {
                         navController.navigate(Screen.HomeMap.route) {
@@ -146,6 +148,24 @@ fun AppNavigation() {
                             }
                             launchSingleTop = true
                         }
+                    },
+                    onCadastroConcluido = {
+                        authViewModel.resetState()
+
+                        navController.navigate(CONFIRMATION_ROUTE) {
+                            popUpTo(Screen.Cadastro.route) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+            composable(CONFIRMATION_ROUTE) {
+                ConfirmationScreen(
+                    onVoltarLogin = {
+                        voltarParaLogin()
                     }
                 )
             }
@@ -159,12 +179,7 @@ fun AppNavigation() {
                     },
                     onLogout = {
                         authViewModel.logout {
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(navController.graph.id) {
-                                    inclusive = false
-                                }
-                                launchSingleTop = true
-                            }
+                            voltarParaLogin()
                         }
                     }
                 )
@@ -180,7 +195,7 @@ fun AppNavigation() {
                         }
                     )
 
-                    // Atalho disponível apenas na versão de desenvolvimento.
+                    // Atalho mantido para os testes de desenvolvimento.
                     if (modoDesenvolvimento) {
                         Button(
                             onClick = {

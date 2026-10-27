@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
+import com.memori.app.ui.screens.profile.AvatarImagem
 import com.memori.app.ui.theme.RedPrimary
 import kotlinx.coroutines.CancellationException
 
@@ -27,18 +28,15 @@ fun RankingScreen(onBackToHome: () -> Unit) {
     val authViewModel = LocalAuthViewModel.current
     val token by authViewModel.sessionToken.collectAsState()
 
-    var resposta by remember {
+    var resposta by remember(token) {
         mutableStateOf<RankingTemposResponse?>(null)
     }
-
-    var loading by remember {
+    var loading by remember(token) {
         mutableStateOf(true)
     }
-
-    var erro by remember {
+    var erro by remember(token) {
         mutableStateOf<String?>(null)
     }
-
     var atualizar by remember {
         mutableIntStateOf(0)
     }
@@ -189,26 +187,40 @@ fun RankingScreen(onBackToHome: () -> Unit) {
                                         shape = RoundedCornerShape(16.dp),
                                         color = Color(0xFFFFF3E0)
                                     ) {
-                                        Column(
-                                            modifier = Modifier.padding(16.dp)
+                                        Row(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text(
-                                                text = "Seu melhor resultado",
-                                                fontWeight = FontWeight.Bold,
-                                                color = RedPrimary
-                                            )
+                                            if (meu != null) {
+                                                AvatarImagem(
+                                                    avatar = meu.avatar,
+                                                    modifier = Modifier.size(40.dp)
+                                                )
 
-                                            Spacer(Modifier.height(4.dp))
+                                                Spacer(Modifier.width(12.dp))
+                                            }
 
-                                            Text(
-                                                text = if (meu != null) {
-                                                    "#${meu.posicao} • " +
-                                                            formatarTempo(meu.tempoSegundos)
-                                                } else {
-                                                    "Você ainda não concluiu este desafio."
-                                                },
-                                                color = Color.DarkGray
-                                            )
+                                            Column(
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text(
+                                                    text = "Seu melhor resultado",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = RedPrimary
+                                                )
+
+                                                Spacer(Modifier.height(4.dp))
+
+                                                Text(
+                                                    text = if (meu != null) {
+                                                        "#${meu.posicao} • " +
+                                                                formatarTempo(meu.tempoSegundos)
+                                                    } else {
+                                                        "Você ainda não concluiu este desafio."
+                                                    },
+                                                    color = Color.DarkGray
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -267,20 +279,33 @@ private fun RankingTempoItem(
         }
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = if (resultado.posicao == 1) {
-                    "👑"
-                } else {
-                    "#${resultado.posicao}"
-                },
-                fontWeight = FontWeight.Bold,
-                color = RedPrimary,
-                fontSize = 20.sp,
-                modifier = Modifier.width(44.dp)
-            )
+            Column(
+                modifier = Modifier.width(44.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = if (resultado.posicao == 1) {
+                        "👑"
+                    } else {
+                        "#${resultado.posicao}"
+                    },
+                    fontWeight = FontWeight.Bold,
+                    color = RedPrimary,
+                    fontSize = 14.sp
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                AvatarImagem(
+                    avatar = resultado.avatar,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+
+            Spacer(Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -306,7 +331,7 @@ private fun RankingTempoItem(
             Text(
                 text = formatarTempo(resultado.tempoSegundos),
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = RedPrimary
             )
         }

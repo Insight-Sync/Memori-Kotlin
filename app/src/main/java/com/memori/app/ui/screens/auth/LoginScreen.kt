@@ -1,37 +1,34 @@
 package com.memori.app.ui.screens.auth
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.memori.app.R
 
 @Composable
 fun LoginScreen(
@@ -41,7 +38,6 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var senhaVisivel by remember { mutableStateOf(false) }
 
     val authState by viewModel.authState.collectAsState()
     val loading = authState is AuthState.Loading
@@ -61,17 +57,15 @@ fun LoginScreen(
                 "Preencha o e-mail e a senha",
                 Toast.LENGTH_SHORT
             ).show()
-
             return
         }
 
         focusManager.clearFocus()
-        senhaVisivel = false
 
         viewModel.login(
-            email,
-            password,
-            onNavigateToHome
+            email = email,
+            pass = password,
+            onSuccess = onNavigateToHome
         )
     }
 
@@ -92,187 +86,180 @@ fun LoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(AuthBackground)
             .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "E-mail:",
-            modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        AuthHeader()
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
+        Spacer(modifier = Modifier.height(40.dp))
+
+        Column(
             modifier = Modifier
+                .widthIn(max = 440.dp)
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .focusRequester(emailFocus)
-                .focusProperties {
-                    next = senhaFocus
-                }
-                .onPreviewKeyEvent { event ->
-                    if (event.key == Key.Tab) {
-                        if (event.type == KeyEventType.KeyDown) {
-                            focusManager.moveFocus(
-                                if (event.isShiftPressed) {
-                                    FocusDirection.Previous
-                                } else {
-                                    FocusDirection.Next
-                                }
-                            )
-                        }
-
-                        true
-                    } else {
-                        false
-                    }
-                },
-            placeholder = {
-                Text("Digite o seu e-mail")
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
+                .padding(horizontal = 36.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            RegistrationField(
+                label = "E-mail:",
+                value = email,
+                placeholder = "Digite o seu e-mail",
                 keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next
-            ),
-            keyboardActions = KeyboardActions(
-                onNext = {
-                    senhaFocus.requestFocus()
-                }
-            ),
-            enabled = !loading
-        )
-
-        Text(
-            text = "Senha:",
-            modifier = Modifier.fillMaxWidth(),
-            style = MaterialTheme.typography.bodyLarge
-        )
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 32.dp)
-                .focusRequester(senhaFocus)
-                .focusProperties {
-                    previous = emailFocus
-                }
-                .onPreviewKeyEvent { event ->
-                    if (event.key == Key.Tab) {
-                        if (event.type == KeyEventType.KeyDown) {
-                            focusManager.moveFocus(
-                                if (event.isShiftPressed) {
-                                    FocusDirection.Previous
-                                } else {
-                                    FocusDirection.Next
-                                }
-                            )
-                        }
-
-                        true
-                    } else {
-                        false
-                    }
-                },
-            placeholder = {
-                Text("Digite a sua senha")
-            },
-            visualTransformation = if (senhaVisivel) {
-                VisualTransformation.None
-            } else {
-                PasswordVisualTransformation()
-            },
-            trailingIcon = {
-                IconButton(
-                    onClick = {
-                        senhaVisivel = !senhaVisivel
+                enabled = !loading,
+                modifier = Modifier
+                    .focusRequester(emailFocus)
+                    .focusProperties {
+                        next = senhaFocus
                     },
-                    enabled = !loading,
-                    modifier = Modifier.focusProperties {
-                        canFocus = false
-                    }
-                ) {
-                    Icon(
-                        imageVector = if (senhaVisivel) {
-                            Icons.Default.VisibilityOff
-                        } else {
-                            Icons.Default.Visibility
-                        },
-                        contentDescription = if (senhaVisivel) {
-                            "Ocultar senha"
-                        } else {
-                            "Mostrar senha"
-                        }
-                    )
-                }
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            ),
-            keyboardActions = KeyboardActions(
-                onDone = { entrar() }
-            ),
-            enabled = !loading
-        )
-
-        Button(
-            onClick = { entrar() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(25.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
-            enabled = !loading
-        ) {
-            if (loading) {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            } else {
-                Text(
-                    text = "Entrar",
-                    fontSize = 18.sp,
-                    color = Color.White
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Não tem uma conta? ",
-                color = Color.Gray,
-                fontSize = 14.sp
+                onValueChange = { email = it }
             )
 
-            TextButton(
-                onClick = onNavigateToCadastro,
+            Spacer(modifier = Modifier.height(12.dp))
+
+            RegistrationField(
+                label = "Senha:",
+                value = password,
+                placeholder = "Digite a sua senha",
+                isPassword = true,
                 enabled = !loading,
-                contentPadding = PaddingValues(0.dp)
+                imeAction = ImeAction.Done,
+                modifier = Modifier
+                    .focusRequester(senhaFocus)
+                    .focusProperties {
+                        previous = emailFocus
+                    },
+                onDone = { entrar() },
+                onValueChange = { password = it }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { entrar() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(58.dp),
+                enabled = !loading,
+                shape = RoundedCornerShape(29.dp),
+                border = BorderStroke(3.dp, AuthPink),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AuthCoral,
+                    contentColor = Color.White
+                )
+            ) {
+                if (loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White
+                    )
+                } else {
+                    Text(
+                        text = "Entrar",
+                        fontSize = 18.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Cadastre-se!",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    textDecoration = TextDecoration.Underline,
+                    text = "Não tem uma conta? ",
+                    color = AuthCoral,
+                    fontSize = 12.sp
+                )
+
+                TextButton(
+                    onClick = onNavigateToCadastro,
+                    enabled = !loading,
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        text = "Cadastre-se!",
+                        color = AuthCoral,
+                        fontSize = 12.sp,
+                        textDecoration = TextDecoration.Underline
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Divider(
+                    modifier = Modifier.weight(1f),
+                    color = AuthPink.copy(alpha = 0.4f)
+                )
+
+                Text(
+                    text = "ou",
+                    color = AuthCoral,
                     fontSize = 14.sp
                 )
+
+                Divider(
+                    modifier = Modifier.weight(1f),
+                    color = AuthPink.copy(alpha = 0.4f)
+                )
             }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Text(
+                text = "Fazer login com:",
+                color = AuthCoral,
+                fontSize = 18.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf(
+                    R.drawable.instagram to "Instagram",
+                    R.drawable.facebook to "Facebook",
+                    R.drawable.google to "Google"
+                ).forEach { (imagem, plataforma) ->
+                    IconButton(
+                        onClick = {
+                            Toast.makeText(
+                                context,
+                                "Login com $plataforma em breve!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        enabled = !loading,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .border(
+                                width = 1.dp,
+                                color = AuthCoral,
+                                shape = CircleShape
+                            )
+                    ) {
+                        Image(
+                            painter = painterResource(imagem),
+                            contentDescription = "Entrar com $plataforma",
+                            modifier = Modifier.size(34.dp),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }

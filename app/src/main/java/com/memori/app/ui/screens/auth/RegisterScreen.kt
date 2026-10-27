@@ -1,10 +1,11 @@
 package com.memori.app.ui.screens.auth
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -16,32 +17,34 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.memori.app.ui.theme.RedPrimary
+import com.memori.app.R
 
 @Suppress("UNUSED_PARAMETER")
 @Composable
 fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onNavigateToHome: () -> Unit,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = viewModel(),
+    onCadastroConcluido: () -> Unit = onNavigateToLogin
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -69,7 +72,6 @@ fun RegisterScreen(
                 "Aceite os termos de uso",
                 Toast.LENGTH_SHORT
             ).show()
-
             return
         }
 
@@ -80,15 +82,7 @@ fun RegisterScreen(
             pass = password,
             name = name,
             username = username,
-            onSuccess = {
-                Toast.makeText(
-                    context,
-                    "Conta criada! Entre com seu e-mail e senha.",
-                    Toast.LENGTH_LONG
-                ).show()
-
-                onNavigateToLogin()
-            }
+            onSuccess = onCadastroConcluido
         )
     }
 
@@ -106,61 +100,32 @@ fun RegisterScreen(
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF9F9F9))
+            .background(AuthBackground)
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .offset(x = (-20).dp, y = (-20).dp)
-                .clip(CircleShape)
-                .background(
-                    Color(0xFFFFD54F).copy(alpha = 0.5f)
-                )
+        AuthHeader(
+            titulo = "Cadastro",
+            onVoltar = {
+                if (!loading) {
+                    onNavigateToLogin()
+                }
+            }
         )
 
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .align(Alignment.TopEnd)
-                .offset(x = 20.dp, y = (-30).dp)
-                .clip(CircleShape)
-                .background(
-                    Color(0xFF81C784).copy(alpha = 0.5f)
-                )
-        )
-
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .offset(x = 100.dp, y = 200.dp)
-                .clip(CircleShape)
-                .background(
-                    Color(0xFF4DB6AC).copy(alpha = 0.3f)
-                )
-        )
+        Spacer(modifier = Modifier.height(0.dp))
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
+                .widthIn(max = 440.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(60.dp))
-
-            Text(
-                text = "Cadastro",
-                color = RedPrimary,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(Modifier.height(40.dp))
-
             RegistrationField(
                 label = "Nome completo:",
                 value = name,
@@ -206,10 +171,11 @@ fun RegisterScreen(
             RegistrationField(
                 label = "Senha:",
                 value = password,
-                placeholder = "Mínimo de 8 caracteres",
+                placeholder = "Digite a sua senha",
                 isPassword = true,
                 enabled = !loading,
                 imeAction = ImeAction.Done,
+                bottomSpacing = 0.dp,
                 modifier = Modifier
                     .focusRequester(senhaFocus)
                     .focusProperties {
@@ -219,9 +185,7 @@ fun RegisterScreen(
             )
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 RadioButton(
@@ -231,94 +195,70 @@ fun RegisterScreen(
                     },
                     enabled = !loading,
                     colors = RadioButtonDefaults.colors(
-                        selectedColor = RedPrimary
+                        selectedColor = AuthCoral,
+                        unselectedColor = AuthCoral
                     )
                 )
 
                 Text(
                     text = "Concordo com os termos de uso",
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = AuthCoral
                 )
             }
-
-            Spacer(Modifier.height(16.dp))
 
             Button(
                 onClick = { cadastrar() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(58.dp),
                 enabled = !loading,
+                shape = RoundedCornerShape(29.dp),
+                border = BorderStroke(3.dp, AuthPink),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = RedPrimary
-                ),
-                shape = RoundedCornerShape(28.dp)
+                    containerColor = AuthCoral,
+                    contentColor = Color.White
+                )
             ) {
                 if (loading) {
                     CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White
                     )
                 } else {
                     Text(
                         text = "Cadastrar",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 18.sp
                     )
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-
             TextButton(
                 onClick = onNavigateToLogin,
-                enabled = !loading
+                enabled = !loading,
+                contentPadding = PaddingValues(
+                    horizontal = 8.dp,
+                    vertical = 0.dp
+                )
             ) {
                 Text(
                     text = "Já tenho uma conta!",
-                    color = RedPrimary,
-                    textDecoration = TextDecoration.Underline,
-                    fontSize = 14.sp
+                    color = AuthCoral,
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline
                 )
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                Box(
-                    Modifier
-                        .size(20.dp)
-                        .background(
-                            Color(0xFFFF5252),
-                            RoundedCornerShape(2.dp)
-                        )
-                )
+            Image(
+                painter = painterResource(R.drawable.logo_rabiscado),
+                contentDescription = "MEMORI",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(56.dp)
+            )
 
-                Spacer(Modifier.width(4.dp))
-
-                Box(
-                    Modifier
-                        .size(20.dp)
-                        .background(
-                            Color(0xFFFFC107),
-                            RoundedCornerShape(2.dp)
-                        )
-                )
-
-                Spacer(Modifier.width(4.dp))
-
-                Box(
-                    Modifier
-                        .size(20.dp)
-                        .background(
-                            Color(0xFF4CAF50),
-                            RoundedCornerShape(2.dp)
-                        )
-                )
-            }
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -333,12 +273,11 @@ fun RegistrationField(
     keyboardType: KeyboardType = KeyboardType.Text,
     modifier: Modifier = Modifier,
     imeAction: ImeAction = ImeAction.Next,
+    onDone: (() -> Unit)? = null,
+    bottomSpacing: Dp = 16.dp,
     onValueChange: (String) -> Unit
 ) {
-    var senhaVisivel by remember {
-        mutableStateOf(false)
-    }
-
+    var senhaVisivel by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(enabled) {
@@ -350,15 +289,15 @@ fun RegistrationField(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp)
+            .padding(bottom = bottomSpacing)
     ) {
         Text(
             text = label,
-            color = RedPrimary,
+            color = AuthCoral,
             fontSize = 14.sp,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .padding(bottom = 4.dp)
+                .padding(bottom = 6.dp)
         )
 
         OutlinedTextField(
@@ -377,7 +316,6 @@ fun RegistrationField(
                                 }
                             )
                         }
-
                         true
                     } else {
                         false
@@ -387,19 +325,22 @@ fun RegistrationField(
                 Text(
                     text = placeholder,
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = Color(0xFFB8B8B8)
                 )
             },
-            shape = RoundedCornerShape(26.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = RedPrimary.copy(
-                    alpha = 0.5f
-                ),
-                focusedBorderColor = RedPrimary
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 14.sp
             ),
-            visualTransformation = if (
-                isPassword && !senhaVisivel
-            ) {
+            shape = RoundedCornerShape(28.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = AuthCoral,
+                unfocusedBorderColor = AuthCoral,
+                cursorColor = AuthCoral,
+                focusedContainerColor = AuthBackground,
+                unfocusedContainerColor = AuthBackground,
+                disabledContainerColor = AuthBackground
+            ),
+            visualTransformation = if (isPassword && !senhaVisivel) {
                 PasswordVisualTransformation()
             } else {
                 VisualTransformation.None
@@ -426,7 +367,7 @@ fun RegistrationField(
                             } else {
                                 "Mostrar senha"
                             },
-                            tint = RedPrimary
+                            tint = AuthCoral
                         )
                     }
                 }
@@ -443,12 +384,11 @@ fun RegistrationField(
             ),
             keyboardActions = KeyboardActions(
                 onNext = {
-                    focusManager.moveFocus(
-                        FocusDirection.Next
-                    )
+                    focusManager.moveFocus(FocusDirection.Next)
                 },
                 onDone = {
                     focusManager.clearFocus()
+                    onDone?.invoke()
                 }
             ),
             singleLine = true,

@@ -37,7 +37,8 @@ data class RankingTempo(
     val nomeUsuario: String,
     val tempoSegundos: Int,
     val concluidoEm: String,
-    val posicao: Int
+    val posicao: Int,
+    val avatar: String? = null
 )
 
 data class RankingTemposResponse(
