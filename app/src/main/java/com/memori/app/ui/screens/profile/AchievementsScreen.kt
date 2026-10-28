@@ -38,12 +38,11 @@ fun AchievementsScreen() {
         ?.substringBefore(" ")
         ?.takeIf { it.isNotBlank() }
         ?: "Perfil"
-
-    // Ao trocar de conta, recria os estados desta tela.
     key(token) {
         ConteudoConquistas(
             token = token,
-            nomeCurto = nomeCurto
+            nomeCurto = nomeCurto,
+            avatar = usuario?.avatar
         )
     }
 }
@@ -51,7 +50,8 @@ fun AchievementsScreen() {
 @Composable
 private fun ConteudoConquistas(
     token: String?,
-    nomeCurto: String
+    nomeCurto: String,
+    avatar: String?
 ) {
     var resultado by remember {
         mutableStateOf<RankingTempo?>(null)
@@ -122,17 +122,10 @@ private fun ConteudoConquistas(
                     ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .background(
-                                Color(0xFFFFEB3B),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("😑", fontSize = 14.sp)
-                    }
+                    AvatarImagem(
+                        avatar = avatar,
+                        modifier = Modifier.size(24.dp)
+                    )
 
                     Spacer(Modifier.width(8.dp))
 

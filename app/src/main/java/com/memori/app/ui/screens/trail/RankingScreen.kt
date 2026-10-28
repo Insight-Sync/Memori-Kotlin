@@ -1,339 +1,316 @@
 package com.memori.app.ui.screens.trail
 
+import android.content.Context
+import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import com.memori.app.R
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.screens.profile.AvatarImagem
-import com.memori.app.ui.theme.RedPrimary
 import kotlinx.coroutines.CancellationException
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
 
 @Composable
 fun RankingScreen(onBackToHome: () -> Unit) {
-    val authViewModel = LocalAuthViewModel.current
-    val token by authViewModel.sessionToken.collectAsState()
+    val context = LocalContext.current
+    val viewModel = LocalAuthViewModel.current
+    val token by viewModel.sessionToken.collectAsState()
+    val usuario by viewModel.usuario.collectAsState()
+    val coral = Color(0xFFFF666B)
+    val debug = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    val demonstracao = token == null && debug
 
-    var resposta by remember(token) {
-        mutableStateOf<RankingTemposResponse?>(null)
-    }
-    var loading by remember(token) {
-        mutableStateOf(true)
-    }
-    var erro by remember(token) {
-        mutableStateOf<String?>(null)
-    }
-    var atualizar by remember {
-        mutableIntStateOf(0)
-    }
+    var resposta by remember(token) { mutableStateOf<RankingTemposResponse?>(null) }
+    var carregando by remember(token) { mutableStateOf(false) }
+    var erro by remember(token) { mutableStateOf<String?>(null) }
+    var atualizacao by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(token, atualizar) {
-        loading = true
-        erro = null
+    LaunchedEffect(token, atualizacao) {
         resposta = null
-
+        erro = null
+        if (demonstracao) return@LaunchedEffect
+        val credencial = token
+        if (credencial == null) {
+            erro = "Entre na sua conta para consultar o ranking."
+            return@LaunchedEffect
+        }
+        carregando = true
         try {
-            val tokenAtual = token
-
-            if (tokenAtual == null) {
-                erro = "Entre novamente para consultar o ranking."
-            } else {
-                resposta = RankingClient.api.buscarRanking(
-                    authorization = "Bearer $tokenAtual"
-                )
-            }
+            resposta = RankingClient.api.buscarRanking("Bearer $credencial")
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
             erro = mensagemErroRanking(error)
         } finally {
-            loading = false
+            carregando = false
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-            .padding(20.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.92f),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(8.dp)
+    val meuId = usuario?.id ?: resposta?.meuResultado?.usuarioId
+    val resultados = if (demonstracao) {
+        listOf(
+            RankingTempo("demonstracao", "Username", "username", 40, "", 1, usuario?.avatar),
+            RankingTempo("exemplo-2", "Jogador 2", "jogador2", 55, "", 2, "azul"),
+            RankingTempo("exemplo-3", "Jogador 3", "jogador3", 70, "", 3, "vermelho")
+        )
+    } else {
+        resposta?.rankings.orEmpty().sortedBy { it.posicao }.map {
+            if (it.usuarioId == meuId) it.copy(avatar = usuario?.avatar ?: it.avatar) else it
+        }
+    }
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val alturaCard = (maxHeight - 150.dp).coerceIn(480.dp, 680.dp)
+        FundoRanking()
+        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.36f)))
+
+        Column(
+            modifier = Modifier.fillMaxSize().navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    color = Color.White,
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(2.dp, coral)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Ranking",
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RedPrimary
-                        )
-
-                        Text(
-                            text = "Quebra-cabeça do KKKK",
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { atualizar++ },
-                        enabled = !loading
+                    Row(
+                        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Atualizar ranking",
-                            tint = RedPrimary
+                        AvatarImagem(usuario?.avatar, Modifier.size(28.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            usuario?.nome?.substringBefore(" ") ?: if (demonstracao) "Username" else "Perfil",
+                            color = Color.Gray,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+                Surface(
+                    color = Color.White,
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(2.dp, coral)
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("10", color = Color.Gray)
+                        Spacer(Modifier.width(5.dp))
+                        Icon(Icons.Default.Star, "Estrelas", tint = Color(0xFFFFD83D), modifier = Modifier.size(24.dp))
+                    }
+                }
+            }
 
-                Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(20.dp))
 
-                Text(
-                    text = "Melhor tempo de cada pessoa",
-                    fontSize = 13.sp,
-                    color = Color.Gray
+            Box(
+                modifier = Modifier.widthIn(max = 380.dp).fillMaxWidth().height(alturaCard)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.card_body),
+                    contentDescription = null,
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize()
                 )
 
-                Spacer(Modifier.height(16.dp))
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(
+                        start = 28.dp, end = 28.dp, top = 30.dp, bottom = 48.dp
+                    )
                 ) {
-                    val dados = resposta
-                    val mensagem = erro
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Ranking", color = Color(0xFF777777), fontSize = 20.sp, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { atualizacao++ }, enabled = !carregando && !demonstracao) {
+                            Icon(Icons.Default.Refresh, "Atualizar ranking", tint = coral)
+                        }
+                        Spacer(Modifier.width(28.dp))
+                    }
+
+                    if (demonstracao) {
+                        Text("Prévia · dados de demonstração", color = Color.Gray, fontSize = 11.sp)
+                    }
 
                     when {
-                        loading -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center),
-                                color = RedPrimary
-                            )
+                        carregando -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = coral)
                         }
-
-                        mensagem != null -> {
-                            Column(
-                                modifier = Modifier.align(Alignment.Center),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                        erro != null -> Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(erro.orEmpty(), color = coral, textAlign = TextAlign.Center)
+                            TextButton(onClick = { atualizacao++ }) { Text("Tentar novamente", color = coral) }
+                        }
+                        resultados.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Ainda não há resultados.\nConclua a quest para participar!", color = Color.Gray, textAlign = TextAlign.Center)
+                        }
+                        else -> Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            val primeiro = resultados.first()
+                            Text(
+                                "#${primeiro.posicao.toString().padStart(2, '0')} PRIMEIRO LUGAR",
+                                color = coral, fontSize = 18.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                formatarTempo(primeiro.tempoSegundos),
+                                color = Color.Gray, fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Image(
+                                painterResource(R.drawable.coroa),
+                                contentDescription = "Primeiro lugar",
+                                modifier = Modifier.size(40.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Surface(
+                                modifier = Modifier.size(138.dp),
+                                shape = CircleShape,
+                                color = Color.Transparent,
+                                border = BorderStroke(3.dp, Color(0xFFFFD83D))
                             ) {
-                                Text(
-                                    text = mensagem,
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-
-                                TextButton(
-                                    onClick = { atualizar++ }
-                                ) {
-                                    Text("Tentar novamente")
+                                Box(contentAlignment = Alignment.Center) {
+                                    AvatarImagem(primeiro.avatar, Modifier.size(90.dp))
                                 }
                             }
-                        }
-
-                        dados == null || dados.rankings.isEmpty() -> {
+                            Spacer(Modifier.height(8.dp))
                             Text(
-                                text = "Ainda não há resultados.\n" +
-                                        "Conclua o desafio para participar!",
-                                modifier = Modifier.align(Alignment.Center),
-                                textAlign = TextAlign.Center,
-                                color = Color.Gray
+                                primeiro.nomeUsuario,
+                                color = Color.Gray, fontSize = 18.sp,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
-                        }
-
-                        else -> {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                item {
-                                    val meu = dados.meuResultado
-
-                                    Surface(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = RoundedCornerShape(16.dp),
-                                        color = Color(0xFFFFF3E0)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(16.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            if (meu != null) {
-                                                AvatarImagem(
-                                                    avatar = meu.avatar,
-                                                    modifier = Modifier.size(40.dp)
-                                                )
-
-                                                Spacer(Modifier.width(12.dp))
-                                            }
-
-                                            Column(
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Text(
-                                                    text = "Seu melhor resultado",
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = RedPrimary
-                                                )
-
-                                                Spacer(Modifier.height(4.dp))
-
-                                                Text(
-                                                    text = if (meu != null) {
-                                                        "#${meu.posicao} • " +
-                                                                formatarTempo(meu.tempoSegundos)
-                                                    } else {
-                                                        "Você ainda não concluiu este desafio."
-                                                    },
-                                                    color = Color.DarkGray
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                items(
-                                    items = dados.rankings,
-                                    key = { it.usuarioId }
-                                ) { resultado ->
-                                    RankingTempoItem(
-                                        resultado = resultado,
-                                        souEu = resultado.usuarioId ==
-                                                dados.meuResultado?.usuarioId
-                                    )
-                                }
+                            Spacer(Modifier.height(18.dp))
+                            resultados.drop(1).forEach { pessoa ->
+                                LinhaRanking(pessoa, coral)
+                                Spacer(Modifier.height(12.dp))
+                            }
+                            val meu = resposta?.meuResultado
+                            if (!demonstracao && meu != null && resultados.none { it.usuarioId == meu.usuarioId }) {
+                                HorizontalDivider(color = Color.LightGray)
+                                Spacer(Modifier.height(12.dp))
+                                Text("Seu resultado", color = coral, fontSize = 13.sp)
+                                LinhaRanking(meu.copy(avatar = usuario?.avatar ?: meu.avatar), coral)
                             }
                         }
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Image(
+                    painterResource(R.drawable.estrela_verde),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(top = 24.dp).size(58.dp)
+                )
+            }
 
-                Button(
-                    onClick = onBackToHome,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(26.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedPrimary
-                    )
-                ) {
-                    Text("Voltar ao início")
-                }
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = onBackToHome,
+                shape = RoundedCornerShape(26.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = coral),
+                modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth().height(48.dp)
+            ) {
+                Text("Voltar ao mapa", color = Color.White)
             }
         }
     }
 }
 
 @Composable
-private fun RankingTempoItem(
-    resultado: RankingTempo,
-    souEu: Boolean
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = if (souEu) {
-            Color(0xFFFFF8E1)
-        } else {
-            Color(0xFFF9F9F9)
-        },
-        border = if (souEu) {
-            BorderStroke(1.dp, RedPrimary)
-        } else {
-            null
-        }
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+private fun LinhaRanking(pessoa: RankingTempo, coral: Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            modifier = Modifier.size(50.dp),
+            shape = CircleShape,
+            color = Color.White,
+            border = BorderStroke(1.5.dp, coral)
         ) {
-            Column(
-                modifier = Modifier.width(44.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = if (resultado.posicao == 1) {
-                        "👑"
-                    } else {
-                        "#${resultado.posicao}"
-                    },
-                    fontWeight = FontWeight.Bold,
-                    color = RedPrimary,
-                    fontSize = 14.sp
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                AvatarImagem(
-                    avatar = resultado.avatar,
-                    modifier = Modifier.size(36.dp)
-                )
+            Box(contentAlignment = Alignment.Center) {
+                AvatarImagem(pessoa.avatar, Modifier.size(34.dp))
             }
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text("#${pessoa.posicao.toString().padStart(2, '0')}", color = coral, fontSize = 18.sp)
+            Text(pessoa.nomeUsuario, color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Text(formatarTempo(pessoa.tempoSegundos), color = Color.Gray, fontSize = 11.sp)
+    }
+}
 
-            Spacer(Modifier.width(10.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = resultado.nomeUsuario +
-                            if (souEu) " (Você)" else "",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = resultado.nome,
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Text(
-                text = formatarTempo(resultado.tempoSegundos),
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = RedPrimary
-            )
+@Composable
+private fun FundoRanking() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val map = remember(context) {
+        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+        Configuration.getInstance().userAgentValue = context.packageName
+        MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
+            setMultiTouchControls(false)
+            setBuiltInZoomControls(false)
+            controller.setZoom(18.5)
+            controller.setCenter(GeoPoint(-24.487632, -47.840771))
         }
     }
+    DisposableEffect(map, lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> map.onResume()
+                Lifecycle.Event.ON_PAUSE -> map.onPause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) map.onResume()
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            map.onPause()
+            map.onDetach()
+        }
+    }
+    AndroidView(factory = { map }, modifier = Modifier.fillMaxSize())
 }

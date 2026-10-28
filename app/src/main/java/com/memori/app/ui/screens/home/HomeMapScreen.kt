@@ -156,13 +156,13 @@ fun HomeMapScreen(
             icon = criarIconeDoMapa(
                 context = context,
                 recurso = R.drawable.guaracui,
-                larguraDp = 70,
-                alturaDp = 90
+                larguraDp = 100,
+                alturaDp = 130
             )
 
             setAnchor(
                 Marker.ANCHOR_CENTER,
-                Marker.ANCHOR_CENTER
+                Marker.ANCHOR_BOTTOM
             )
 
             setOnMarkerClickListener { _, _ ->
@@ -240,9 +240,9 @@ fun HomeMapScreen(
         marcadorUsuario.icon = iconeUsuario
 
         mapView.overlays.add(marcadorKKKK)
-        mapView.overlays.add(marcadorGuaracui)
         mapView.overlays.add(marcadorLanterna)
         mapView.overlays.add(marcadorUsuario)
+        mapView.overlays.add(marcadorGuaracui)
 
         mapView.invalidate()
 

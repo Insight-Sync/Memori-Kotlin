@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,7 +26,6 @@ import com.memori.app.ui.screens.trail.ARScannerScreen
 import com.memori.app.ui.screens.trail.FinalStoryScreen
 import com.memori.app.ui.screens.trail.PuzzleScreen
 import com.memori.app.ui.screens.trail.RankingScreen
-import com.memori.app.ui.screens.trail.TrailStartScreen
 
 private const val CONFIRMATION_ROUTE = "confirmation"
 
@@ -39,6 +39,13 @@ fun AppNavigation() {
         (context.applicationInfo.flags and
                 ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
+    var acessoDemonstracao by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    val demonstracaoAtiva =
+        modoDesenvolvimento && acessoDemonstracao
+
     val sessionReady by authViewModel.sessionReady.collectAsState()
     val sessionToken by authViewModel.sessionToken.collectAsState()
 
@@ -46,6 +53,7 @@ fun AppNavigation() {
     val rotaAtual = backStackEntry?.destination?.route
 
     fun voltarParaLogin() {
+        acessoDemonstracao = false
         authViewModel.resetState()
 
         navController.navigate(Screen.Login.route) {
@@ -56,7 +64,12 @@ fun AppNavigation() {
         }
     }
 
-    LaunchedEffect(sessionReady, sessionToken, rotaAtual) {
+    LaunchedEffect(
+        sessionReady,
+        sessionToken,
+        rotaAtual,
+        demonstracaoAtiva
+    ) {
         val rotasPublicas = setOf(
             Screen.Splash.route,
             Screen.Login.route,
@@ -67,6 +80,7 @@ fun AppNavigation() {
         if (
             sessionReady &&
             sessionToken == null &&
+            !demonstracaoAtiva &&
             rotaAtual != null &&
             rotaAtual !in rotasPublicas
         ) {
@@ -95,10 +109,13 @@ fun AppNavigation() {
                 LaunchedEffect(
                     splashFinished,
                     sessionReady,
-                    sessionToken
+                    sessionToken,
+                    demonstracaoAtiva
                 ) {
                     if (splashFinished && sessionReady) {
-                        val destino = if (sessionToken != null) {
+                        val destino = if (
+                            sessionToken != null || demonstracaoAtiva
+                        ) {
                             Screen.HomeMap.route
                         } else {
                             Screen.Login.route
@@ -115,24 +132,52 @@ fun AppNavigation() {
             }
 
             composable(Screen.Login.route) {
-                LoginScreen(
-                    viewModel = authViewModel,
-                    onNavigateToHome = {
-                        navController.navigate(Screen.HomeMap.route) {
-                            popUpTo(Screen.Login.route) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToCadastro = {
-                        authViewModel.resetState()
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    LoginScreen(
+                        viewModel = authViewModel,
+                        onNavigateToHome = {
+                            acessoDemonstracao = false
 
-                        navController.navigate(Screen.Cadastro.route) {
-                            launchSingleTop = true
+                            navController.navigate(Screen.HomeMap.route) {
+                                popUpTo(Screen.Login.route) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
+                        },
+                        onNavigateToCadastro = {
+                            authViewModel.resetState()
+
+                            navController.navigate(Screen.Cadastro.route) {
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+
+                    if (modoDesenvolvimento) {
+                        Button(
+                            onClick = {
+                                acessoDemonstracao = true
+                                authViewModel.resetState()
+
+                                navController.navigate(Screen.HomeMap.route) {
+                                    popUpTo(Screen.Login.route) {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .statusBarsPadding()
+                                .padding(12.dp)
+                        ) {
+                            Text("Pular login")
                         }
                     }
-                )
+                }
             }
 
             composable(Screen.Cadastro.route) {
@@ -173,55 +218,60 @@ fun AppNavigation() {
             composable(Screen.HomeMap.route) {
                 MainScreen(
                     onNavigateToTrailStart = {
-                        navController.navigate(
-                            Screen.Splash.route + "_trail"
-                        )
+                        navController.navigate(Screen.ARScanner.route) {
+                            launchSingleTop = true
+                        }
                     },
                     onLogout = {
-                        authViewModel.logout {
+                        if (demonstracaoAtiva) {
                             voltarParaLogin()
+                        } else {
+                            authViewModel.logout {
+                                voltarParaLogin()
+                            }
                         }
                     }
                 )
             }
 
-            composable(Screen.Splash.route + "_trail") {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    TrailStartScreen(
-                        onStartAR = {
-                            navController.navigate(
-                                Screen.ARScanner.route
-                            )
+            composable(Screen.ARScanner.route) {
+                fun abrirPuzzle() {
+                    val rota = navController.currentBackStackEntry
+                        ?.destination?.route
+
+                    if (rota == Screen.ARScanner.route) {
+                        navController.navigate(Screen.Puzzle.route) {
+                            popUpTo(Screen.ARScanner.route) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    ARScannerScreen(
+                        onFinishedAR = {
+                            abrirPuzzle()
                         }
                     )
 
-                    // Atalho mantido para os testes de desenvolvimento.
                     if (modoDesenvolvimento) {
                         Button(
                             onClick = {
-                                navController.navigate(
-                                    Screen.Puzzle.route
-                                ) {
-                                    launchSingleTop = true
-                                }
+                                abrirPuzzle()
                             },
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .navigationBarsPadding()
                                 .padding(24.dp)
                         ) {
-                            Text("Testar puzzle — sem câmera")
+                            Text("Pular câmera")
                         }
                     }
                 }
-            }
-
-            composable(Screen.ARScanner.route) {
-                ARScannerScreen(
-                    onFinishedAR = {
-                        navController.navigate(Screen.Puzzle.route)
-                    }
-                )
             }
 
             composable(Screen.Puzzle.route) {
