@@ -1,5 +1,11 @@
 package com.memori.app.ui.screens.trail
 
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -76,7 +82,7 @@ fun PuzzleScreen(
     val context = LocalContext.current
     val coral = Color(0xFFFF666B)
     val debug = (context.applicationInfo.flags and
-            ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        ApplicationInfo.FLAG_DEBUGGABLE) != 0
     var finalizarSolicitado by rememberSaveable { mutableStateOf(false) }
 
     val authViewModel = LocalAuthViewModel.current
@@ -452,7 +458,10 @@ fun PuzzleScreen(
 
             Spacer(Modifier.height(64.dp))
 
-            Button(
+            BotaoDesenhado(
+                texto = if (erro != null) "Tentar finalizar novamente" else "Finalizar",
+                enabled = tempoFinal != null && !salvando && !navegando,
+                carregando = salvando,
                 onClick = {
                     if (tempoFinal != null && !salvando && !navegando) {
                         erro = null
@@ -460,32 +469,8 @@ fun PuzzleScreen(
                         finalizarSolicitado = true
                     }
                 },
-                enabled = tempoFinal != null && !salvando && !navegando,
-                modifier = Modifier
-                    .widthIn(max = 320.dp)
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = coral,
-                    contentColor = Color.White,
-                    disabledContainerColor = coral.copy(alpha = 0.5f),
-                    disabledContentColor = Color.White
-                )
-            ) {
-                if (salvando) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(22.dp),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(
-                        text = if (erro != null) "Tentar finalizar novamente" else "Finalizar",
-                        fontSize = 18.sp
-                    )
-                }
-            }
+                modifier = Modifier.widthIn(max = 320.dp).fillMaxWidth()
+            )
 
             erro?.let {
                 Spacer(Modifier.height(12.dp))
@@ -497,6 +482,50 @@ fun PuzzleScreen(
             }
 
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun BotaoDesenhado(
+    texto: String,
+    enabled: Boolean,
+    carregando: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    manterTextoDaImagem: Boolean = false
+) {
+    Box(
+        modifier = modifier
+            .aspectRatio(663f / 174f)
+            .alpha(if (enabled || carregando) 1f else 0.5f)
+            .clip(RoundedCornerShape(100.dp))
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = texto },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.btn_padrao),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize()
+        )
+        if (!manterTextoDaImagem || carregando) {
+            Box(
+                modifier = Modifier.fillMaxWidth(0.72f).fillMaxHeight(0.72f)
+                    .background(Color(0xFFFF666B), RoundedCornerShape(100.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (carregando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(texto, color = Color.White, fontSize = 18.sp)
+                }
+            }
         }
     }
 }

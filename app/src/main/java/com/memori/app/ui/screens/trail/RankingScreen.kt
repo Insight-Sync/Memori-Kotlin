@@ -1,5 +1,10 @@
 package com.memori.app.ui.screens.trail
 
+import com.memori.app.ui.screens.home.MenuMemori
+import com.memori.app.ui.screens.home.DestinoMenuMemori
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.activity.compose.BackHandler
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.BorderStroke
@@ -41,6 +46,7 @@ import org.osmdroid.views.MapView
 
 @Composable
 fun RankingScreen(onBackToHome: () -> Unit) {
+    BackHandler(onBack = onBackToHome)
     val context = LocalContext.current
     val viewModel = LocalAuthViewModel.current
     val token by viewModel.sessionToken.collectAsState()
@@ -89,14 +95,14 @@ fun RankingScreen(onBackToHome: () -> Unit) {
     }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val alturaCard = (maxHeight - 150.dp).coerceIn(480.dp, 680.dp)
+        val alturaCard = (maxHeight - 230.dp).coerceIn(360.dp, 680.dp)
         FundoRanking()
         Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.36f)))
 
         Column(
             modifier = Modifier.fillMaxSize().navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 140.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
@@ -195,7 +201,7 @@ fun RankingScreen(onBackToHome: () -> Unit) {
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Text(
-                                formatarTempo(primeiro.tempoSegundos),
+                                formatarTempo(primeiro.tempoSegundos) + " h",
                                 color = Color.Gray, fontSize = 12.sp,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -223,6 +229,12 @@ fun RankingScreen(onBackToHome: () -> Unit) {
                                 maxLines = 1, overflow = TextOverflow.Ellipsis
                             )
                             Spacer(Modifier.height(18.dp))
+                            HorizontalDivider(
+                                modifier = Modifier.fillMaxWidth(0.9f),
+                                thickness = 1.dp,
+                                color = Color(0xFFB8B8B8)
+                            )
+                            Spacer(Modifier.height(14.dp))
                             resultados.drop(1).forEach { pessoa ->
                                 LinhaRanking(pessoa, coral)
                                 Spacer(Modifier.height(12.dp))
@@ -246,16 +258,18 @@ fun RankingScreen(onBackToHome: () -> Unit) {
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onBackToHome,
-                shape = RoundedCornerShape(26.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = coral),
-                modifier = Modifier.widthIn(max = 300.dp).fillMaxWidth().height(48.dp)
-            ) {
-                Text("Voltar ao mapa", color = Color.White)
-            }
+
         }
+        MenuMemori(
+            selecionado = "map",
+            avatar = usuario?.avatar,
+            onNavigate = { destino ->
+                DestinoMenuMemori.solicitar(destino)
+                onBackToHome()
+            },
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+                .padding(bottom = 24.dp).widthIn(max = 320.dp).fillMaxWidth(0.82f)
+        )
     }
 }
 
@@ -275,9 +289,20 @@ private fun LinhaRanking(pessoa: RankingTempo, coral: Color) {
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text("#${pessoa.posicao.toString().padStart(2, '0')}", color = coral, fontSize = 18.sp)
-            Text(pessoa.nomeUsuario, color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(pessoa.nomeUsuario, color = Color.Gray, fontSize = 12.sp,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 100.dp))
+                Canvas(Modifier.weight(1f).height(12.dp).padding(horizontal = 2.dp)) {
+                    var x = 0f
+                    while (x < size.width) {
+                        drawCircle(Color.Gray, radius = 0.7.dp.toPx(), center = Offset(x, size.height * 0.75f))
+                        x += 4.dp.toPx()
+                    }
+                }
+                Text(formatarTempo(pessoa.tempoSegundos) + " h", color = Color.Gray, fontSize = 11.sp)
+            }
         }
-        Text(formatarTempo(pessoa.tempoSegundos), color = Color.Gray, fontSize = 11.sp)
     }
 }
 

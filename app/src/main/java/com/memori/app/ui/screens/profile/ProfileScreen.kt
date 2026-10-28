@@ -1,5 +1,9 @@
 package com.memori.app.ui.screens.profile
 
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import android.content.pm.ApplicationInfo
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
@@ -313,34 +317,17 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                 Spacer(Modifier.height(32.dp))
 
-                Button(
+                BotaoDesenhado(
+                    texto = "Sair",
+                    enabled = !saindo && !salvandoAvatar,
+                    carregando = saindo,
+                    manterTextoDaImagem = true,
                     onClick = {
                         if (demonstracao) viewModel.limparDemonstracao()
                         onLogout()
                     },
-                    enabled = !saindo && !salvandoAvatar,
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedPrimary
-                    ),
-                    shape = RoundedCornerShape(28.dp)
-                ) {
-                    if (saindo) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = Color.White
-                        )
-                    } else {
-                        Text(
-                            text = "Sair",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                    modifier = Modifier.fillMaxWidth(0.85f)
+                )
             }
         }
     }
@@ -363,4 +350,48 @@ fun AvatarImagem(
         modifier = modifier,
         contentScale = ContentScale.Fit
     )
+}
+
+@Composable
+private fun BotaoDesenhado(
+    texto: String,
+    enabled: Boolean,
+    carregando: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    manterTextoDaImagem: Boolean = false
+) {
+    Box(
+        modifier = modifier
+            .aspectRatio(663f / 174f)
+            .alpha(if (enabled || carregando) 1f else 0.5f)
+            .clip(RoundedCornerShape(100.dp))
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = texto },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.btn_padrao),
+            contentDescription = null,
+            contentScale = ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize()
+        )
+        if (!manterTextoDaImagem || carregando) {
+            Box(
+                modifier = Modifier.fillMaxWidth(0.72f).fillMaxHeight(0.72f)
+                    .background(Color(0xFFFF666B), RoundedCornerShape(100.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (carregando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(texto, color = Color.White, fontSize = 18.sp)
+                }
+            }
+        }
+    }
 }

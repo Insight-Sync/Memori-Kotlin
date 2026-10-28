@@ -1,30 +1,31 @@
 package com.memori.app.ui.screens.profile
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.memori.app.R
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.screens.trail.RankingClient
 import com.memori.app.ui.screens.trail.RankingTempo
 import com.memori.app.ui.screens.trail.formatarTempo
 import com.memori.app.ui.screens.trail.mensagemErroRanking
-import com.memori.app.ui.theme.RedPrimary
 import kotlinx.coroutines.CancellationException
 
 @Composable
@@ -33,56 +34,34 @@ fun AchievementsScreen() {
     val usuario by viewModel.usuario.collectAsState()
     val token by viewModel.sessionToken.collectAsState()
 
-    val nomeCurto = usuario?.nome
-        ?.trim()
-        ?.substringBefore(" ")
-        ?.takeIf { it.isNotBlank() }
-        ?: "Perfil"
-    key(token) {
-        ConteudoConquistas(
-            token = token,
-            nomeCurto = nomeCurto,
-            avatar = usuario?.avatar
-        )
-    }
-}
+    val coral = Color(0xFFFF666B)
 
-@Composable
-private fun ConteudoConquistas(
-    token: String?,
-    nomeCurto: String,
-    avatar: String?
-) {
-    var resultado by remember {
+    var resultado by remember(token) {
         mutableStateOf<RankingTempo?>(null)
     }
 
-    var carregando by remember {
+    var carregando by remember(token) {
         mutableStateOf(true)
     }
 
-    var erro by remember {
+    var erro by remember(token) {
         mutableStateOf<String?>(null)
     }
 
-    var atualizacao by remember {
-        mutableIntStateOf(0)
-    }
-
-    LaunchedEffect(token, atualizacao) {
+    LaunchedEffect(token) {
         carregando = true
         erro = null
         resultado = null
 
         try {
-            if (token.isNullOrBlank()) {
-                erro = "Entre novamente para consultar suas conquistas."
-            } else {
-                val resposta = RankingClient.api.buscarRanking(
-                    authorization = "Bearer $token"
-                )
+            val credencial = token
 
-                resultado = resposta.meuResultado
+            if (credencial.isNullOrBlank()) {
+                erro = "Entre na sua conta para carregar suas conquistas e seu melhor tempo."
+            } else {
+                resultado = RankingClient.api.buscarRanking(
+                    authorization = "Bearer $credencial"
+                ).meuResultado
             }
         } catch (error: CancellationException) {
             throw error
@@ -98,44 +77,46 @@ private fun ConteudoConquistas(
             .fillMaxSize()
             .background(Color(0xFFF9F9F9))
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(
+                horizontal = 20.dp,
+                vertical = 24.dp
+            ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.weight(1f, fill = false),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = Color.White,
-                border = BorderStroke(1.dp, RedPrimary),
+                border = BorderStroke(1.5.dp, coral),
                 shadowElevation = 2.dp
             ) {
                 Row(
                     modifier = Modifier.padding(
-                        horizontal = 12.dp,
-                        vertical = 6.dp
+                        horizontal = 10.dp,
+                        vertical = 5.dp
                     ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AvatarImagem(
-                        avatar = avatar,
-                        modifier = Modifier.size(24.dp)
+                        avatar = usuario?.avatar,
+                        modifier = Modifier.size(26.dp)
                     )
 
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
 
                     Text(
-                        text = nomeCurto,
-                        color = RedPrimary,
-                        fontWeight = FontWeight.Bold,
+                        text = usuario?.nome
+                            ?.substringBefore(" ")
+                            ?: "Perfil",
+                        color = Color.Gray,
                         fontSize = 14.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 130.dp)
                     )
                 }
             }
@@ -143,24 +124,31 @@ private fun ConteudoConquistas(
             Spacer(Modifier.width(12.dp))
 
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = Color.White,
-                border = BorderStroke(1.dp, RedPrimary)
+                border = BorderStroke(1.5.dp, coral)
             ) {
-                Text(
-                    text = when {
-                        carregando -> "Carregando..."
-                        erro != null -> "Indisponível"
-                        resultado != null -> "1 conquista 🏆"
-                        else -> "0 conquistas"
-                    },
+                Row(
                     modifier = Modifier.padding(
-                        horizontal = 12.dp,
-                        vertical = 8.dp
+                        horizontal = 10.dp,
+                        vertical = 5.dp
                     ),
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "10",
+                        color = Color.Gray
+                    )
+
+                    Spacer(Modifier.width(4.dp))
+
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Estrelas",
+                        tint = Color(0xFFFFD83D),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
 
@@ -168,249 +156,155 @@ private fun ConteudoConquistas(
 
         Text(
             text = "Minhas conquistas",
-            color = RedPrimary,
+            color = coral,
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            textAlign = TextAlign.Center
         )
 
         Spacer(Modifier.height(24.dp))
 
-        val conquista = resultado
-        val mensagemErro = erro
-
         when {
             carregando -> {
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 64.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .height(320.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        color = RedPrimary
+                        color = coral
                     )
+                }
+            }
 
-                    Spacer(Modifier.height(16.dp))
-
+            erro != null -> {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 340.dp)
+                        .fillMaxWidth()
+                        .padding(vertical = 48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = "Buscando suas conquistas...",
-                        color = Color.Gray
+                        text = erro.orEmpty(),
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
                     )
-                }
-            }
-
-            mensagemErro != null -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Não foi possível carregar",
-                            color = RedPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(
-                            text = mensagemErro,
-                            textAlign = TextAlign.Center,
-                            color = Color.Gray
-                        )
-
-                        Spacer(Modifier.height(20.dp))
-
-                        Button(
-                            onClick = { atualizacao++ },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = RedPrimary
-                            )
-                        ) {
-                            Text("Tentar novamente")
-                        }
-                    }
-                }
-            }
-
-            conquista == null -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "🏁",
-                            fontSize = 64.sp
-                        )
-
-                        Spacer(Modifier.height(20.dp))
-
-                        Text(
-                            text = "Você ainda não possui conquistas",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
-                            color = RedPrimary,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(
-                            text = "Conclua o quebra-cabeça do KKKK " +
-                                    "para registrar sua primeira conquista!",
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center
-                        )
-                    }
                 }
             }
 
             else -> {
-                ConquistaKKKKCard(resultado = conquista)
+                CartaoLanternas(
+                    resultado = resultado
+                )
             }
         }
-
-        Spacer(Modifier.height(24.dp))
-
-        OutlinedButton(
-            onClick = { atualizacao++ },
-            enabled = !carregando,
-            shape = RoundedCornerShape(24.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = null,
-                tint = RedPrimary
-            )
-
-            Spacer(Modifier.width(8.dp))
-
-            Text(
-                text = "Atualizar conquistas",
-                color = RedPrimary
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
-private fun ConquistaKKKKCard(
-    resultado: RankingTempo
+private fun CartaoLanternas(
+    resultado: RankingTempo?
 ) {
+    val coral = Color(0xFFFF666B)
+    val tempo = resultado?.tempoSegundos
+
+    val estrelas = when {
+        tempo == null -> 0
+        tempo < 30 -> 3
+        tempo <= 60 -> 2
+        else -> 1
+    }
+
+    val imagemEstrelas = when (estrelas) {
+        3 -> R.drawable.tres_estrelas
+        2 -> R.drawable.duas_estrelas
+        1 -> R.drawable.uma_estrela
+        else -> R.drawable.zero_estrelas
+    }
+
     Card(
         modifier = Modifier
-            .widthIn(max = 320.dp)
+            .widthIn(max = 340.dp)
             .fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = Color(0xFFF9F9F9)
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 8.dp
+            defaultElevation = 4.dp
         ),
         border = BorderStroke(
-            1.dp,
-            Color.LightGray.copy(alpha = 0.3f)
+            width = 1.dp,
+            color = Color(0xFFD6D6D6)
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(
+                    horizontal = 18.dp,
+                    vertical = 24.dp
+                ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Image(
+                painter = painterResource(imagemEstrelas),
+                contentDescription = "$estrelas de 3 estrelas",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .width(150.dp)
+                    .height(44.dp)
+            )
+
+            Spacer(Modifier.height(12.dp))
+
             Text(
-                text = "Desafio concluído",
-                color = Color(0xFF2E7D32),
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
+                text = "Lanternas Brilhantes",
+                color = Color.Gray,
+                fontSize = 20.sp,
+                textAlign = TextAlign.Center
             )
 
             Spacer(Modifier.height(16.dp))
 
-            Text(
-                text = "Explorador do KKKK",
-                color = Color(0xFF666666),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Quebra-cabeça do Conjunto Monumental KKKK",
-                color = Color.Gray,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(Modifier.height(32.dp))
-
-            Box(
+            Image(
+                painter = painterResource(R.drawable.lanterna),
+                contentDescription = "Lanternas Brilhantes",
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .size(140.dp)
-                    .background(
-                        Color(0xFFFFC107).copy(alpha = 0.12f),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "🏛️",
-                    fontSize = 80.sp
-                )
-            }
-
-            Spacer(Modifier.height(32.dp))
-
-            Text(
-                text = "#${resultado.posicao} Lugar",
-                color = RedPrimary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = "Posição atual no ranking",
-                color = Color.Gray,
-                fontSize = 12.sp
+                    .fillMaxWidth()
+                    .height(260.dp)
             )
 
             Spacer(Modifier.height(20.dp))
 
             Text(
-                text = "Seu melhor tempo",
-                color = Color.Gray,
-                fontSize = 14.sp
+                text = if (resultado == null) {
+                    "Ainda não iniciada"
+                } else {
+                    "Conquistada!"
+                },
+                color = coral,
+                fontSize = 18.sp
             )
 
-            Text(
-                text = formatarTempo(resultado.tempoSegundos),
-                color = RedPrimary,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Spacer(Modifier.height(6.dp))
+
+            if (tempo != null) {
+                Text(
+                    text = "Melhor tempo: ${formatarTempo(tempo)} h",
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
+            } else {
+                Text(
+                    text = "Conclua a quest para conquistar sua lanterna.",
+                    color = Color.Gray,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
