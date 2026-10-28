@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +19,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.memori.app.R
@@ -57,7 +59,7 @@ fun AchievementsScreen() {
             val credencial = token
 
             if (credencial.isNullOrBlank()) {
-                erro = "Entre na sua conta para carregar suas conquistas e seu melhor tempo."
+                erro = "Entre na sua conta para carregar suas conquistas."
             } else {
                 resultado = RankingClient.api.buscarRanking(
                     authorization = "Bearer $credencial"
@@ -72,131 +74,174 @@ fun AchievementsScreen() {
         }
     }
 
-    Column(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF9F9F9))
-            .verticalScroll(rememberScrollState())
-            .padding(
-                horizontal = 20.dp,
-                vertical = 24.dp
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        val larguraCard = (maxWidth * 0.82f)
+            .coerceAtMost(340.dp)
+
+        val alturaCard = larguraCard * (1338f / 933f)
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color.White,
-                border = BorderStroke(1.5.dp, coral),
-                shadowElevation = 2.dp
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(
-                        horizontal = 10.dp,
-                        vertical = 5.dp
+                Surface(
+                    modifier = Modifier.weight(
+                        weight = 1f,
+                        fill = false
                     ),
-                    verticalAlignment = Alignment.CenterVertically
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.5.dp, coral),
+                    shadowElevation = 2.dp
                 ) {
-                    AvatarImagem(
-                        avatar = usuario?.avatar,
-                        modifier = Modifier.size(26.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(
+                            horizontal = 10.dp,
+                            vertical = 5.dp
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AvatarImagem(
+                            avatar = usuario?.avatar,
+                            modifier = Modifier.size(26.dp)
+                        )
 
-                    Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(6.dp))
 
-                    Text(
-                        text = usuario?.nome
-                            ?.substringBefore(" ")
-                            ?: "Perfil",
-                        color = Color.Gray,
-                        fontSize = 14.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 130.dp)
-                    )
+                        Text(
+                            text = usuario?.nome
+                                ?.substringBefore(" ")
+                                ?: "Perfil",
+                            color = Color.Gray,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.White,
+                    border = BorderStroke(1.5.dp, coral)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(
+                            horizontal = 10.dp,
+                            vertical = 5.dp
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "10",
+                            color = Color.Gray
+                        )
+
+                        Spacer(Modifier.width(4.dp))
+
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Estrelas",
+                            tint = Color(0xFFFFD83D),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.height(32.dp))
 
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color.White,
-                border = BorderStroke(1.5.dp, coral)
-            ) {
-                Row(
-                    modifier = Modifier.padding(
-                        horizontal = 10.dp,
-                        vertical = 5.dp
-                    ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "10",
-                        color = Color.Gray
-                    )
+            Text(
+                text = "Minhas conquistas",
+                color = coral,
+                fontSize = 24.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
 
-                    Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.height(24.dp))
 
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Estrelas",
-                        tint = Color(0xFFFFD83D),
-                        modifier = Modifier.size(24.dp)
-                    )
+            when {
+                carregando -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(alturaCard),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = coral
+                        )
+                    }
                 }
-            }
-        }
 
-        Spacer(Modifier.height(32.dp))
-
-        Text(
-            text = "Minhas conquistas",
-            color = coral,
-            fontSize = 24.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(Modifier.height(24.dp))
-
-        when {
-            carregando -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(320.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        color = coral
-                    )
+                erro != null -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 240.dp)
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = erro.orEmpty(),
+                            color = Color.Gray,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
-            }
 
-            erro != null -> {
-                Column(
-                    modifier = Modifier
-                        .widthIn(max = 340.dp)
-                        .fillMaxWidth()
-                        .padding(vertical = 48.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = erro.orEmpty(),
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center
-                    )
+                else -> {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(alturaCard + 16.dp),
+                        contentPadding = PaddingValues(
+                            start = 20.dp,
+                            end = 20.dp,
+                            top = 4.dp,
+                            bottom = 12.dp
+                        ),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        item(key = "lanternas") {
+                            CartaoLanternas(
+                                resultado = resultado,
+                                largura = larguraCard,
+                                altura = alturaCard
+                            )
+                        }
+
+                        item(key = "proxima-conquista") {
+                            Image(
+                                painter = painterResource(
+                                    R.drawable.conquista_add
+                                ),
+                                contentDescription = "Espaço para uma próxima conquista",
+                                contentScale = ContentScale.FillBounds,
+                                modifier = Modifier
+                                    .width(larguraCard)
+                                    .height(alturaCard)
+                            )
+                        }
+                    }
                 }
-            }
-
-            else -> {
-                CartaoLanternas(
-                    resultado = resultado
-                )
             }
         }
     }
@@ -204,7 +249,9 @@ fun AchievementsScreen() {
 
 @Composable
 private fun CartaoLanternas(
-    resultado: RankingTempo?
+    resultado: RankingTempo?,
+    largura: Dp,
+    altura: Dp
 ) {
     val coral = Color(0xFFFF666B)
     val tempo = resultado?.tempoSegundos
@@ -225,8 +272,8 @@ private fun CartaoLanternas(
 
     Card(
         modifier = Modifier
-            .widthIn(max = 340.dp)
-            .fillMaxWidth(),
+            .width(largura)
+            .height(altura),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFF9F9F9)
@@ -241,10 +288,10 @@ private fun CartaoLanternas(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(
-                    horizontal = 18.dp,
-                    vertical = 24.dp
+                    horizontal = 16.dp,
+                    vertical = 20.dp
                 ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -253,20 +300,20 @@ private fun CartaoLanternas(
                 contentDescription = "$estrelas de 3 estrelas",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .width(150.dp)
-                    .height(44.dp)
+                    .width(140.dp)
+                    .height(40.dp)
             )
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             Text(
                 text = "Lanternas Brilhantes",
                 color = Color.Gray,
-                fontSize = 20.sp,
+                fontSize = 19.sp,
                 textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             Image(
                 painter = painterResource(R.drawable.lanterna),
@@ -274,34 +321,29 @@ private fun CartaoLanternas(
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp)
+                    .weight(1f)
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
 
             Text(
-                text = if (resultado == null) {
-                    "Ainda não iniciada"
+                text = if (resultado != null) {
+                    "#${resultado.posicao} Lugar"
                 } else {
-                    "Conquistada!"
+                    "Em progresso"
                 },
                 color = coral,
-                fontSize = 18.sp
+                fontSize = 18.sp,
+                textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(6.dp))
-
             if (tempo != null) {
+                Spacer(Modifier.height(6.dp))
+
                 Text(
-                    text = "Melhor tempo: ${formatarTempo(tempo)} h",
+                    text = "${formatarTempo(tempo)} h",
                     color = Color.Gray,
-                    fontSize = 13.sp
-                )
-            } else {
-                Text(
-                    text = "Conclua a quest para conquistar sua lanterna.",
-                    color = Color.Gray,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     textAlign = TextAlign.Center
                 )
             }
