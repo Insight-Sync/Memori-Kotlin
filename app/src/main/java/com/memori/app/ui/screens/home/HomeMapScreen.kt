@@ -38,6 +38,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.memori.app.R
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
+import com.memori.app.ui.screens.trail.RankingClient
+import kotlinx.coroutines.CancellationException
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -56,6 +58,60 @@ fun HomeMapScreen(
     val authViewModel = LocalAuthViewModel.current
 
     val usuario by authViewModel.usuario.collectAsState()
+    val token by authViewModel.sessionToken.collectAsState()
+
+    var estrelasConquistadas by remember(token) {
+        mutableIntStateOf(0)
+    }
+
+    var atualizarConquista by remember {
+        mutableIntStateOf(0)
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                atualizarConquista++
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(token, atualizarConquista) {
+        val credencial = token
+
+        if (credencial.isNullOrBlank()) {
+            estrelasConquistadas = 0
+            return@LaunchedEffect
+        }
+
+        try {
+            val resultado = RankingClient.api.buscarRanking(
+                authorization = "Bearer $credencial"
+            ).meuResultado
+
+            estrelasConquistadas = when {
+                resultado == null -> 0
+                resultado.tempoSegundos < 30 -> 3
+                resultado.tempoSegundos <= 60 -> 2
+                else -> 1
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Toast.makeText(
+                context,
+                "Não foi possível atualizar a conquista no mapa.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
     val avatarAtual = usuario?.avatar
 
     val nomeCurto = usuario?.nome
@@ -91,7 +147,8 @@ fun HomeMapScreen(
             )
         )
 
-        Configuration.getInstance().userAgentValue = context.packageName
+        Configuration.getInstance().userAgentValue =
+            context.packageName
 
         MapView(context).apply {
             setTileSource(TileSourceFactory.MAPNIK)
@@ -199,6 +256,28 @@ fun HomeMapScreen(
         }
     }
 
+    LaunchedEffect(
+        marcadorLanterna,
+        estrelasConquistadas
+    ) {
+        marcadorLanterna.icon = if (estrelasConquistadas == 1) {
+            criarIconeLanternaUmaEstrela(context)
+        } else {
+            criarIconeDoMapa(
+                context = context,
+                recurso = when (estrelasConquistadas) {
+                    3 -> R.drawable.lanterna_3_estrelas
+                    2 -> R.drawable.lanterna_2_estrelas
+                    else -> R.drawable.lanterna_nao_iniciado
+                },
+                larguraDp = 100,
+                alturaDp = 125
+            )
+        }
+
+        mapView.invalidate()
+    }
+
     val marcadorUsuario = remember(mapView) {
         Marker(mapView).apply {
             position = localUsuarioMock
@@ -267,7 +346,9 @@ fun HomeMapScreen(
     }
 
     var hasLocationPermission by remember {
-        mutableStateOf(temPermissaoDeLocalizacao(context))
+        mutableStateOf(
+            temPermissaoDeLocalizacao(context)
+        )
     }
 
     val launcher = rememberLauncherForActivityResult(
@@ -309,8 +390,14 @@ fun HomeMapScreen(
     DisposableEffect(lifecycleOwner, mapView) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> mapView.onResume()
-                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_RESUME -> {
+                    mapView.onResume()
+                }
+
+                Lifecycle.Event.ON_PAUSE -> {
+                    mapView.onPause()
+                }
+
                 else -> Unit
             }
         }
@@ -457,7 +544,10 @@ fun HomeMapScreen(
             },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 86.dp, end = 20.dp),
+                .padding(
+                    top = 86.dp,
+                    end = 20.dp
+                ),
             shape = CircleShape,
             containerColor = Color.White,
             contentColor = HomeCoral
@@ -474,8 +564,13 @@ fun HomeMapScreen(
             fontSize = 10.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .background(Color.White.copy(alpha = 0.85f))
-                .padding(horizontal = 5.dp, vertical = 2.dp)
+                .background(
+                    Color.White.copy(alpha = 0.85f)
+                )
+                .padding(
+                    horizontal = 5.dp,
+                    vertical = 2.dp
+                )
         )
     }
 }
@@ -500,8 +595,14 @@ private fun criarIconeDoMapa(
     alturaDp: Int
 ): BitmapDrawable {
     val densidade = context.resources.displayMetrics.density
-    val largura = (larguraDp * densidade).toInt().coerceAtLeast(1)
-    val altura = (alturaDp * densidade).toInt().coerceAtLeast(1)
+
+    val largura = (larguraDp * densidade)
+        .toInt()
+        .coerceAtLeast(1)
+
+    val altura = (alturaDp * densidade)
+        .toInt()
+        .coerceAtLeast(1)
 
     val drawable = requireNotNull(
         ContextCompat.getDrawable(context, recurso)
@@ -513,8 +614,11 @@ private fun criarIconeDoMapa(
         Bitmap.Config.ARGB_8888
     )
 
-    val larguraOriginal = drawable.intrinsicWidth.coerceAtLeast(1)
-    val alturaOriginal = drawable.intrinsicHeight.coerceAtLeast(1)
+    val larguraOriginal = drawable.intrinsicWidth
+        .coerceAtLeast(1)
+
+    val alturaOriginal = drawable.intrinsicHeight
+        .coerceAtLeast(1)
 
     val escala = minOf(
         largura.toFloat() / larguraOriginal,
@@ -544,8 +648,14 @@ private fun criarPinDoUsuario(
     avatar: String?
 ): BitmapDrawable {
     val densidade = context.resources.displayMetrics.density
-    val largura = (52 * densidade).toInt().coerceAtLeast(1)
-    val altura = (64 * densidade).toInt().coerceAtLeast(1)
+
+    val largura = (52 * densidade)
+        .toInt()
+        .coerceAtLeast(1)
+
+    val altura = (64 * densidade)
+        .toInt()
+        .coerceAtLeast(1)
 
     val bitmap = Bitmap.createBitmap(
         largura,
@@ -618,8 +728,11 @@ private fun criarPinDoUsuario(
         ContextCompat.getDrawable(context, recursoAvatar)
     )
 
-    val larguraOriginal = drawable.intrinsicWidth.coerceAtLeast(1)
-    val alturaOriginal = drawable.intrinsicHeight.coerceAtLeast(1)
+    val larguraOriginal = drawable.intrinsicWidth
+        .coerceAtLeast(1)
+
+    val alturaOriginal = drawable.intrinsicHeight
+        .coerceAtLeast(1)
 
     val escala = minOf(
         48f / larguraOriginal,
@@ -640,6 +753,92 @@ private fun criarPinDoUsuario(
     )
 
     drawable.draw(canvas)
+
+    return BitmapDrawable(context.resources, bitmap)
+}
+
+private fun criarIconeLanternaUmaEstrela(
+    context: Context
+): BitmapDrawable {
+    val densidade = context.resources.displayMetrics.density
+
+    val largura = (100 * densidade)
+        .toInt()
+        .coerceAtLeast(1)
+
+    val altura = (125 * densidade)
+        .toInt()
+        .coerceAtLeast(1)
+
+    val bitmap = Bitmap.createBitmap(
+        largura,
+        altura,
+        Bitmap.Config.ARGB_8888
+    )
+
+    val canvas = Canvas(bitmap)
+
+    val pintura = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = android.graphics.Color.WHITE
+    }
+
+    val centroX = largura / 2f
+    val centroY = largura / 2f
+    val raio = largura * 0.46f
+
+    canvas.drawCircle(
+        centroX,
+        centroY,
+        raio,
+        pintura
+    )
+
+    val lanterna = criarIconeDoMapa(
+        context = context,
+        recurso = R.drawable.lanterna,
+        larguraDp = 86,
+        alturaDp = 86
+    )
+
+    lanterna.setBounds(
+        (largura * 0.07f).toInt(),
+        (largura * 0.07f).toInt(),
+        (largura * 0.93f).toInt(),
+        (largura * 0.93f).toInt()
+    )
+
+    lanterna.draw(canvas)
+
+    pintura.color = android.graphics.Color.rgb(
+        121,
+        185,
+        243
+    )
+    pintura.style = Paint.Style.STROKE
+    pintura.strokeWidth = 4 * densidade
+
+    canvas.drawCircle(
+        centroX,
+        centroY,
+        raio,
+        pintura
+    )
+
+    val estrelas = criarIconeDoMapa(
+        context = context,
+        recurso = R.drawable.uma_estrela,
+        larguraDp = 100,
+        alturaDp = 25
+    )
+
+    estrelas.setBounds(
+        0,
+        altura - (25 * densidade).toInt(),
+        largura,
+        altura
+    )
+
+    estrelas.draw(canvas)
 
     return BitmapDrawable(context.resources, bitmap)
 }

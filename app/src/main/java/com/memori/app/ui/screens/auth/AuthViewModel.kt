@@ -75,6 +75,11 @@ class AuthViewModel(
                 if (token != null) {
                     carregarPerfil(token)
                 }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _perfilErro.value =
+                    "Não foi possível recuperar a sessão salva."
             } finally {
                 _sessionReady.value = true
             }
@@ -110,6 +115,7 @@ class AuthViewModel(
                 check(resposta.token.isNotBlank()) {
                     "A API não retornou um token válido."
                 }
+
                 val perfil = ApiClient.authApi.buscarPerfil(
                     id = resposta.usuario.id,
                     authorization = "Bearer ${resposta.token}"
@@ -235,6 +241,10 @@ class AuthViewModel(
                 authorization = "Bearer $token"
             )
 
+            check(resposta.usuario.id == id) {
+                "A API retornou um perfil inválido."
+            }
+
             if (_sessionToken.value == token) {
                 _usuario.value = resposta.usuario
             }
@@ -242,7 +252,7 @@ class AuthViewModel(
             throw error
         } catch (error: HttpException) {
             if (_sessionToken.value == token) {
-                if (error.code() in listOf(401, 403, 404)) {
+                if (error.code() == 401) {
                     encerrarSessao()
                 } else {
                     _perfilErro.value = mensagemErro(error)
@@ -276,8 +286,10 @@ class AuthViewModel(
 
         if (token == null) {
             val application = getApplication<Application>()
-            val debug = (application.applicationInfo.flags and
-                ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+            val debug =
+                (application.applicationInfo.flags and
+                        ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
             if (debug && _sessionReady.value) {
                 _usuario.value = UsuarioResponse(
@@ -287,20 +299,26 @@ class AuthViewModel(
                     emailUsuario = "",
                     avatar = avatar
                 )
+
                 _avatarErro.value = null
+            } else {
+                _avatarErro.value =
+                    "Entre na sua conta para alterar o avatar."
             }
+
             return
         }
 
-        val pessoa = _usuario.value ?: return
+        val pessoa = _usuario.value
+
+        if (pessoa == null) {
+            _avatarErro.value =
+                "Seu perfil ainda não foi carregado. Tente novamente."
+            return
+        }
 
         if (_avatarSalvando.value || _perfilLoading.value) return
         if (_authState.value is AuthState.Loading) return
-
-        if (avatar !in avataresPermitidos) {
-            _avatarErro.value = "Escolha um avatar válido."
-            return
-        }
 
         if (avatar == (pessoa.avatar ?: "amarelo")) return
 
@@ -311,7 +329,9 @@ class AuthViewModel(
             try {
                 val resposta = ApiClient.authApi.atualizarAvatar(
                     authorization = "Bearer $token",
-                    dados = AvatarRequest(avatar)
+                    dados = AvatarRequest(
+                        avatar = avatar
+                    )
                 )
 
                 check(resposta.usuario.id == pessoa.id) {
@@ -321,6 +341,7 @@ class AuthViewModel(
                 check(resposta.usuario.avatar == avatar) {
                     "A API não confirmou o avatar escolhido."
                 }
+
                 if (_sessionToken.value == token) {
                     _usuario.value = resposta.usuario
                 }
@@ -328,16 +349,12 @@ class AuthViewModel(
                 throw error
             } catch (error: HttpException) {
                 if (_sessionToken.value == token) {
-                    if (error.code() in listOf(401, 403, 404)) {
-                        encerrarSessao()
-                    } else {
-                        _avatarErro.value = mensagemErro(error)
-                    }
+                    _avatarErro.value = mensagemErroAvatar(error)
                 }
             } catch (error: Exception) {
                 if (_sessionToken.value == token) {
                     _avatarErro.value =
-                        "Não foi possível confirmar o salvamento. " +
+                        "Não foi possível confirmar o salvamento do avatar. " +
                                 "Confira a conexão e tente novamente."
                 }
             } finally {
@@ -348,7 +365,9 @@ class AuthViewModel(
         }
     }
 
-    fun logout(onSuccess: () -> Unit) {
+    fun logout(
+        onSuccess: () -> Unit
+    ) {
         if (_authState.value is AuthState.Loading) return
 
         _authState.value = AuthState.Loading
@@ -386,15 +405,60 @@ class AuthViewModel(
         _authState.value = AuthState.Idle
     }
 
-    private fun mensagemErro(error: Exception): String {
+    private fun mensagemErroAvatar(
+        error: HttpException
+    ): String {
+        val detalhe = extrairMensagemApi(error)
+
+        val mensagem = when (error.code()) {
+            401 ->
+                "A API não aceitou a autenticação para trocar o avatar. " +
+                        "Se a sessão expirou, saia e entre novamente."
+
+            403 ->
+                "A API não permitiu alterar o avatar deste usuário."
+
+            404 ->
+                "A API retornou 404 ao salvar o avatar. " +
+                        "Confira a rota PATCH /api/usuario/me/avatar no backend."
+
+            405 ->
+                "A API não aceitou o método PATCH para atualizar o avatar."
+
+            else ->
+                "Não foi possível salvar o avatar (${error.code()})."
+        }
+
+        return if (detalhe.isNullOrBlank()) {
+            mensagem
+        } else {
+            "$mensagem $detalhe"
+        }
+    }
+
+    private fun extrairMensagemApi(
+        error: HttpException
+    ): String? {
+        return runCatching {
+            val corpo = error.response()
+                ?.errorBody()
+                ?.string()
+
+            val json = JSONObject(corpo ?: "{}")
+
+            json.optString("error")
+                .takeIf { it.isNotBlank() }
+                ?: json.optString("message")
+                    .takeIf { it.isNotBlank() }
+        }.getOrNull()
+    }
+
+    private fun mensagemErro(
+        error: Exception
+    ): String {
         return when (error) {
             is HttpException -> {
-                val mensagem = runCatching {
-                    val corpo = error.response()?.errorBody()?.string()
-                    JSONObject(corpo ?: "{}").optString("error")
-                }.getOrNull()
-
-                mensagem?.takeIf { it.isNotBlank() }
+                extrairMensagemApi(error)
                     ?: "Não foi possível concluir a solicitação (${error.code()})."
             }
 
