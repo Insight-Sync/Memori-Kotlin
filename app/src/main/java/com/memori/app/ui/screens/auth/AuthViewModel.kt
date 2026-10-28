@@ -1,6 +1,7 @@
 package com.memori.app.ui.screens.auth
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import android.util.Base64
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.AndroidViewModel
@@ -109,8 +110,6 @@ class AuthViewModel(
                 check(resposta.token.isNotBlank()) {
                     "A API não retornou um token válido."
                 }
-
-                // O perfil completo contém o avatar salvo no banco.
                 val perfil = ApiClient.authApi.buscarPerfil(
                     id = resposta.usuario.id,
                     authorization = "Bearer ${resposta.token}"
@@ -259,8 +258,40 @@ class AuthViewModel(
         }
     }
 
+    fun limparDemonstracao() {
+        if (_sessionToken.value == null) {
+            _usuario.value = null
+            _avatarErro.value = null
+            _avatarSalvando.value = false
+        }
+    }
+
     fun selecionarAvatar(avatar: String) {
-        val token = _sessionToken.value ?: return
+        if (avatar !in avataresPermitidos) {
+            _avatarErro.value = "Escolha um avatar válido."
+            return
+        }
+
+        val token = _sessionToken.value
+
+        if (token == null) {
+            val application = getApplication<Application>()
+            val debug = (application.applicationInfo.flags and
+                ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+            if (debug && _sessionReady.value) {
+                _usuario.value = UsuarioResponse(
+                    id = "demonstracao",
+                    nome = "Username",
+                    nomeUsuario = "username",
+                    emailUsuario = "",
+                    avatar = avatar
+                )
+                _avatarErro.value = null
+            }
+            return
+        }
+
         val pessoa = _usuario.value ?: return
 
         if (_avatarSalvando.value || _perfilLoading.value) return
@@ -290,8 +321,6 @@ class AuthViewModel(
                 check(resposta.usuario.avatar == avatar) {
                     "A API não confirmou o avatar escolhido."
                 }
-
-                // Só altera a imagem depois da confirmação do servidor.
                 if (_sessionToken.value == token) {
                     _usuario.value = resposta.usuario
                 }
