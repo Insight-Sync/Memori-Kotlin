@@ -17,6 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -28,15 +31,24 @@ import com.memori.app.ui.screens.trail.RankingClient
 import com.memori.app.ui.screens.trail.RankingTempo
 import com.memori.app.ui.screens.trail.formatarTempo
 import com.memori.app.ui.screens.trail.mensagemErroRanking
+import com.memori.app.ui.theme.Manjari
+import com.memori.app.ui.theme.Pangolin
 import kotlinx.coroutines.CancellationException
+
+private val FonteTituloConquistas = FontFamily(
+    Font(
+        resId = R.font.louis_george_cafe_bold,
+        weight = FontWeight.Bold
+    )
+)
+
+private val CoralConquistas = Color(0xFFFF6B6B)
 
 @Composable
 fun AchievementsScreen() {
     val viewModel = LocalAuthViewModel.current
     val usuario by viewModel.usuario.collectAsState()
     val token by viewModel.sessionToken.collectAsState()
-
-    val coral = Color(0xFFFF666B)
 
     var resultado by remember(token) {
         mutableStateOf<RankingTempo?>(null)
@@ -105,7 +117,7 @@ fun AchievementsScreen() {
                     ),
                     shape = RoundedCornerShape(24.dp),
                     color = Color.White,
-                    border = BorderStroke(1.5.dp, coral),
+                    border = BorderStroke(1.5.dp, CoralConquistas),
                     shadowElevation = 2.dp
                 ) {
                     Row(
@@ -127,7 +139,10 @@ fun AchievementsScreen() {
                                 ?.substringBefore(" ")
                                 ?: "Perfil",
                             color = Color.Gray,
+                            fontFamily = Manjari,
+                            fontWeight = FontWeight.Normal,
                             fontSize = 14.sp,
+                            letterSpacing = 0.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -139,7 +154,7 @@ fun AchievementsScreen() {
                 Surface(
                     shape = RoundedCornerShape(24.dp),
                     color = Color.White,
-                    border = BorderStroke(1.5.dp, coral)
+                    border = BorderStroke(1.5.dp, CoralConquistas)
                 ) {
                     Row(
                         modifier = Modifier.padding(
@@ -150,7 +165,11 @@ fun AchievementsScreen() {
                     ) {
                         Text(
                             text = "10",
-                            color = Color.Gray
+                            color = Color.Gray,
+                            fontFamily = Manjari,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 16.sp,
+                            letterSpacing = 0.sp
                         )
 
                         Spacer(Modifier.width(4.dp))
@@ -169,10 +188,16 @@ fun AchievementsScreen() {
 
             Text(
                 text = "Minhas conquistas",
-                color = coral,
-                fontSize = 24.sp,
+                color = CoralConquistas,
+                fontFamily = FonteTituloConquistas,
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                lineHeight = 22.sp,
+                letterSpacing = 0.sp,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 20.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
             )
 
             Spacer(Modifier.height(24.dp))
@@ -186,7 +211,7 @@ fun AchievementsScreen() {
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            color = coral
+                            color = CoralConquistas
                         )
                     }
                 }
@@ -202,6 +227,10 @@ fun AchievementsScreen() {
                         Text(
                             text = erro.orEmpty(),
                             color = Color.Gray,
+                            fontFamily = Manjari,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 14.sp,
+                            letterSpacing = 0.sp,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -253,7 +282,6 @@ private fun CartaoLanternas(
     largura: Dp,
     altura: Dp
 ) {
-    val coral = Color(0xFFFF666B)
     val tempo = resultado?.tempoSegundos
 
     val estrelas = when {
@@ -309,7 +337,11 @@ private fun CartaoLanternas(
             Text(
                 text = "Lanternas Brilhantes",
                 color = Color.Gray,
+                fontFamily = Pangolin,
+                fontWeight = FontWeight.Normal,
                 fontSize = 19.sp,
+                lineHeight = 23.sp,
+                letterSpacing = 0.sp,
                 textAlign = TextAlign.Center
             )
 
@@ -332,8 +364,12 @@ private fun CartaoLanternas(
                 } else {
                     "Em progresso"
                 },
-                color = coral,
+                color = CoralConquistas,
+                fontFamily = Pangolin,
+                fontWeight = FontWeight.Normal,
                 fontSize = 18.sp,
+                lineHeight = 22.sp,
+                letterSpacing = 0.sp,
                 textAlign = TextAlign.Center
             )
 
@@ -343,7 +379,11 @@ private fun CartaoLanternas(
                 Text(
                     text = "${formatarTempo(tempo)} h",
                     color = Color.Gray,
+                    fontFamily = Manjari,
+                    fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    letterSpacing = 0.sp,
                     textAlign = TextAlign.Center
                 )
             }

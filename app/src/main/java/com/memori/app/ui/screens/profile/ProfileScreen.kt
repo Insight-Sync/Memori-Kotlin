@@ -1,33 +1,31 @@
 package com.memori.app.ui.screens.profile
 
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
 import android.content.pm.ApplicationInfo
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBackIos
-import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,19 +34,27 @@ import androidx.compose.ui.unit.sp
 import com.memori.app.R
 import com.memori.app.ui.screens.auth.AuthState
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
-import com.memori.app.ui.theme.RedPrimary
+import com.memori.app.ui.theme.Manjari
+import com.memori.app.ui.theme.Pangolin
+
+private val FonteTituloPerfil = FontFamily(
+    Font(
+        resId = R.font.louis_george_cafe_bold,
+        weight = FontWeight.Bold
+    )
+)
+
+private val CoralPerfil = Color(0xFFFF6B6B)
 
 @Composable
-fun ProfileScreen(onLogout: () -> Unit) {
+fun ProfileScreen(
+    onLogout: () -> Unit
+) {
     val viewModel = LocalAuthViewModel.current
     val context = LocalContext.current
+
     val token by viewModel.sessionToken.collectAsState()
     val pronto by viewModel.sessionReady.collectAsState()
-    val debug = (context.applicationInfo.flags and
-        ApplicationInfo.FLAG_DEBUGGABLE) != 0
-    val demonstracao = debug && token == null
-
-
     val usuario by viewModel.usuario.collectAsState()
     val loading by viewModel.perfilLoading.collectAsState()
     val erroPerfil by viewModel.perfilErro.collectAsState()
@@ -56,26 +62,49 @@ fun ProfileScreen(onLogout: () -> Unit) {
     val salvandoAvatar by viewModel.avatarSalvando.collectAsState()
     val erroAvatar by viewModel.avatarErro.collectAsState()
 
-    val avatares = listOf("amarelo", "azul", "vermelho")
-    val indiceAvatar = avatares.indexOf(usuario?.avatar)
-        .takeIf { it >= 0 } ?: 0
-    val avatarAtual = avatares[indiceAvatar]
+    val debug =
+        (context.applicationInfo.flags and
+                ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
+    val demonstracao = debug && token == null
+
+    val avatares = listOf(
+        "amarelo",
+        "azul",
+        "vermelho"
+    )
+
+    val indiceAvatar = avatares.indexOf(usuario?.avatar)
+        .takeIf { it >= 0 }
+        ?: 0
+
+    val avatarAtual = avatares[indiceAvatar]
     val saindo = authState is AuthState.Loading
+
     val podeTrocarAvatar =
-        pronto && (usuario != null || demonstracao) && !loading && !salvandoAvatar && !saindo
+        pronto &&
+                (usuario != null || demonstracao) &&
+                !loading &&
+                !salvandoAvatar &&
+                !saindo
 
     val nomeCurto = usuario?.nome
         ?.trim()
         ?.substringBefore(" ")
         ?.takeIf { it.isNotBlank() }
-        ?: if (demonstracao) "Username" else "Perfil"
+        ?: if (demonstracao) {
+            "Username"
+        } else {
+            "Perfil"
+        }
 
     fun trocarAvatar(direcao: Int) {
         val novoIndice =
             (indiceAvatar + direcao + avatares.size) % avatares.size
 
-        viewModel.selecionarAvatar(avatares[novoIndice])
+        viewModel.selecionarAvatar(
+            avatares[novoIndice]
+        )
     }
 
     Column(
@@ -95,10 +124,16 @@ fun ProfileScreen(onLogout: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                modifier = Modifier.weight(1f, fill = false),
+                modifier = Modifier.weight(
+                    weight = 1f,
+                    fill = false
+                ),
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
-                border = BorderStroke(1.dp, RedPrimary),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = CoralPerfil
+                ),
                 shadowElevation = 2.dp
             ) {
                 Row(
@@ -117,9 +152,11 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
                     Text(
                         text = nomeCurto,
-                        color = RedPrimary,
-                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray,
+                        fontFamily = Manjari,
+                        fontWeight = FontWeight.Normal,
                         fontSize = 14.sp,
+                        letterSpacing = 0.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -131,7 +168,10 @@ fun ProfileScreen(onLogout: () -> Unit) {
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = Color.White,
-                border = BorderStroke(1.dp, RedPrimary),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = CoralPerfil
+                ),
                 shadowElevation = 2.dp
             ) {
                 Row(
@@ -144,7 +184,10 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     Text(
                         text = "10",
                         color = Color.Gray,
-                        fontWeight = FontWeight.Bold
+                        fontFamily = Manjari,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 16.sp,
+                        letterSpacing = 0.sp
                     )
 
                     Spacer(Modifier.width(4.dp))
@@ -163,9 +206,14 @@ fun ProfileScreen(onLogout: () -> Unit) {
 
         Text(
             text = "Meu perfil",
-            color = RedPrimary,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
+            color = CoralPerfil,
+            fontFamily = FonteTituloPerfil,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            lineHeight = 22.sp,
+            letterSpacing = 0.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(24.dp))
@@ -212,23 +260,31 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     )
 
                     IconButton(
-                        onClick = { trocarAvatar(-1) },
+                        onClick = {
+                            trocarAvatar(-1)
+                        },
                         enabled = podeTrocarAvatar,
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .size(48.dp)
-                            .semantics { contentDescription = "Avatar anterior" }
+                            .semantics {
+                                contentDescription = "Avatar anterior"
+                            }
                     ) {
                         Box(Modifier.size(24.dp))
                     }
 
                     IconButton(
-                        onClick = { trocarAvatar(1) },
+                        onClick = {
+                            trocarAvatar(1)
+                        },
                         enabled = podeTrocarAvatar,
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
                             .size(48.dp)
-                            .semantics { contentDescription = "Próximo avatar" }
+                            .semantics {
+                                contentDescription = "Próximo avatar"
+                            }
                     ) {
                         Box(Modifier.size(24.dp))
                     }
@@ -240,7 +296,7 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
-                        color = RedPrimary
+                        color = CoralPerfil
                     )
                 }
 
@@ -250,8 +306,11 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     Text(
                         text = mensagem,
                         color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        fontSize = 13.sp
+                        fontFamily = Manjari,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        letterSpacing = 0.sp,
+                        textAlign = TextAlign.Center
                     )
                 }
 
@@ -260,30 +319,46 @@ fun ProfileScreen(onLogout: () -> Unit) {
                 if (loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(28.dp),
-                        color = RedPrimary
+                        color = CoralPerfil
                     )
 
                     Spacer(Modifier.height(12.dp))
                 }
 
                 Text(
-                    text = usuario?.nome?.takeIf { it.isNotBlank() }
-                        ?: if (demonstracao) "Username" else "Perfil",
-                    color = RedPrimary,
+                    text = usuario?.nome
+                        ?.takeIf { it.isNotBlank() }
+                        ?: if (demonstracao) {
+                            "Username"
+                        } else {
+                            "Perfil"
+                        },
+                    color = CoralPerfil,
+                    fontFamily = Pangolin,
+                    fontWeight = FontWeight.Normal,
                     fontSize = 20.sp,
+                    letterSpacing = 0.sp,
                     textAlign = TextAlign.Center
                 )
 
                 val username = usuario?.nomeUsuario
-                    ?.trim()?.removePrefix("@")
+                    ?.trim()
+                    ?.removePrefix("@")
                     ?.takeIf { it.isNotBlank() }
-                    ?: if (demonstracao) "username" else null
+                    ?: if (demonstracao) {
+                        "username"
+                    } else {
+                        null
+                    }
 
                 username?.let {
                     Text(
                         text = "@$it",
                         color = Color.Gray,
+                        fontFamily = Manjari,
+                        fontWeight = FontWeight.Normal,
                         fontSize = 14.sp,
+                        letterSpacing = 0.sp,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -294,14 +369,27 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     Text(
                         text = mensagem,
                         color = MaterialTheme.colorScheme.error,
+                        fontFamily = Manjari,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        letterSpacing = 0.sp,
                         textAlign = TextAlign.Center
                     )
 
                     TextButton(
-                        onClick = { viewModel.atualizarPerfil() },
-                        enabled = !loading && !saindo && !salvandoAvatar
+                        onClick = {
+                            viewModel.atualizarPerfil()
+                        },
+                        enabled = !loading &&
+                                !saindo &&
+                                !salvandoAvatar
                     ) {
-                        Text("Tentar novamente")
+                        Text(
+                            text = "Tentar novamente",
+                            fontFamily = Pangolin,
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = 0.sp
+                        )
                     }
                 }
 
@@ -311,6 +399,10 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     Text(
                         text = erro.message,
                         color = MaterialTheme.colorScheme.error,
+                        fontFamily = Manjari,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        letterSpacing = 0.sp,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -323,7 +415,10 @@ fun ProfileScreen(onLogout: () -> Unit) {
                     carregando = saindo,
                     manterTextoDaImagem = true,
                     onClick = {
-                        if (demonstracao) viewModel.limparDemonstracao()
+                        if (demonstracao) {
+                            viewModel.limparDemonstracao()
+                        }
+
                         onLogout()
                     },
                     modifier = Modifier.fillMaxWidth(0.85f)
@@ -345,7 +440,7 @@ fun AvatarImagem(
     }
 
     Image(
-        painter = painterResource(id = imagem),
+        painter = painterResource(imagem),
         contentDescription = "Avatar ${avatar ?: "amarelo"}",
         modifier = modifier,
         contentScale = ContentScale.Fit
@@ -364,10 +459,22 @@ private fun BotaoDesenhado(
     Box(
         modifier = modifier
             .aspectRatio(663f / 174f)
-            .alpha(if (enabled || carregando) 1f else 0.5f)
+            .alpha(
+                if (enabled || carregando) {
+                    1f
+                } else {
+                    0.5f
+                }
+            )
             .clip(RoundedCornerShape(100.dp))
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = texto },
+            .clickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick
+            )
+            .semantics {
+                contentDescription = texto
+            },
         contentAlignment = Alignment.Center
     ) {
         Image(
@@ -376,10 +483,16 @@ private fun BotaoDesenhado(
             contentScale = ContentScale.FillBounds,
             modifier = Modifier.fillMaxSize()
         )
+
         if (!manterTextoDaImagem || carregando) {
             Box(
-                modifier = Modifier.fillMaxWidth(0.72f).fillMaxHeight(0.72f)
-                    .background(Color(0xFFFF666B), RoundedCornerShape(100.dp)),
+                modifier = Modifier
+                    .fillMaxWidth(0.72f)
+                    .fillMaxHeight(0.72f)
+                    .background(
+                        color = Color(0xFFFF666B),
+                        shape = RoundedCornerShape(100.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (carregando) {
@@ -389,7 +502,14 @@ private fun BotaoDesenhado(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text(texto, color = Color.White, fontSize = 18.sp)
+                    Text(
+                        text = texto,
+                        color = Color.White,
+                        fontFamily = Pangolin,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 18.sp,
+                        letterSpacing = 0.sp
+                    )
                 }
             }
         }

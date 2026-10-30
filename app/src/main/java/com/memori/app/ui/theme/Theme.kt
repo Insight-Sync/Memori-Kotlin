@@ -11,7 +11,7 @@ private val LightColorScheme = lightColorScheme(
     background = BackgroundLight,
     onBackground = TextColorDark,
     surface = BackgroundLight,
-    onSurface = TextColorDark,
+    onSurface = TextColorDark
 )
 
 @Composable

@@ -27,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.memori.app.R
+import com.memori.app.ui.theme.Manjari
+import com.memori.app.ui.theme.Pangolin
 
 @Suppress("UNUSED_PARAMETER")
 @Composable
@@ -116,8 +119,6 @@ fun RegisterScreen(
                 }
             }
         )
-
-        Spacer(modifier = Modifier.height(0.dp))
 
         Column(
             modifier = Modifier
@@ -202,7 +203,10 @@ fun RegisterScreen(
 
                 Text(
                     text = "Concordo com os termos de uso",
+                    fontFamily = Pangolin,
+                    fontWeight = FontWeight.Normal,
                     fontSize = 12.sp,
+                    letterSpacing = 0.sp,
                     color = AuthCoral
                 )
             }
@@ -228,7 +232,10 @@ fun RegisterScreen(
                 } else {
                     Text(
                         text = "Cadastrar",
-                        fontSize = 18.sp
+                        fontFamily = Pangolin,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 18.sp,
+                        letterSpacing = 0.sp
                     )
                 }
             }
@@ -244,12 +251,15 @@ fun RegisterScreen(
                 Text(
                     text = "Já tenho uma conta!",
                     color = AuthCoral,
+                    fontFamily = Pangolin,
+                    fontWeight = FontWeight.Normal,
                     fontSize = 14.sp,
+                    letterSpacing = 0.sp,
                     textDecoration = TextDecoration.Underline
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
 
             Image(
                 painter = painterResource(R.drawable.logo_rabiscado),
@@ -258,7 +268,7 @@ fun RegisterScreen(
                 modifier = Modifier.size(56.dp)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(20.dp))
         }
     }
 }
@@ -277,7 +287,10 @@ fun RegistrationField(
     bottomSpacing: Dp = 16.dp,
     onValueChange: (String) -> Unit
 ) {
-    var senhaVisivel by remember { mutableStateOf(false) }
+    var senhaVisivel by remember {
+        mutableStateOf(false)
+    }
+
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(enabled) {
@@ -294,7 +307,11 @@ fun RegistrationField(
         Text(
             text = label,
             color = AuthCoral,
+            fontFamily = Pangolin,
+            fontWeight = FontWeight.Normal,
             fontSize = 14.sp,
+            lineHeight = 14.sp,
+            letterSpacing = 0.sp,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .padding(bottom = 6.dp)
@@ -316,6 +333,7 @@ fun RegistrationField(
                                 }
                             )
                         }
+
                         true
                     } else {
                         false
@@ -324,12 +342,20 @@ fun RegistrationField(
             placeholder = {
                 Text(
                     text = placeholder,
-                    fontSize = 12.sp,
-                    color = Color(0xFFB8B8B8)
+                    fontFamily = Manjari,
+                    fontWeight = FontWeight.Normal,
+                    fontSize = 14.sp,
+                    lineHeight = 14.sp,
+                    letterSpacing = 0.sp,
+                    color = Color(0xFFD9D9D9)
                 )
             },
-            textStyle = LocalTextStyle.current.copy(
-                fontSize = 14.sp
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                fontFamily = Manjari,
+                fontWeight = FontWeight.Normal,
+                fontSize = 14.sp,
+                lineHeight = 14.sp,
+                letterSpacing = 0.sp
             ),
             shape = RoundedCornerShape(28.dp),
             colors = OutlinedTextFieldDefaults.colors(
@@ -340,7 +366,9 @@ fun RegistrationField(
                 unfocusedContainerColor = AuthBackground,
                 disabledContainerColor = AuthBackground
             ),
-            visualTransformation = if (isPassword && !senhaVisivel) {
+            visualTransformation = if (
+                isPassword && !senhaVisivel
+            ) {
                 PasswordVisualTransformation()
             } else {
                 VisualTransformation.None
@@ -384,7 +412,9 @@ fun RegistrationField(
             ),
             keyboardActions = KeyboardActions(
                 onNext = {
-                    focusManager.moveFocus(FocusDirection.Next)
+                    focusManager.moveFocus(
+                        FocusDirection.Next
+                    )
                 },
                 onDone = {
                     focusManager.clearFocus()
@@ -395,4 +425,4 @@ fun RegistrationField(
             enabled = enabled
         )
     }
-}
+} 
