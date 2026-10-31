@@ -54,7 +54,7 @@ fun ARScannerScreen(onFinishedAR: () -> Unit) {
                 factory = { ctx ->
                     ARSceneView(ctx).apply {
                         // Limpa logs de erro de toque/chão
-                        
+
                         configureSession { session, config ->
                             val database = AugmentedImageDatabase(session)
                             try {
@@ -69,7 +69,7 @@ fun ARScannerScreen(onFinishedAR: () -> Unit) {
                             }
                             config.augmentedImageDatabase = database
                             config.focusMode = Config.FocusMode.AUTO
-                            
+
                             // Desativa o que causa erro no Logcat
                             config.planeFindingMode = Config.PlaneFindingMode.DISABLED
                             config.depthMode = Config.DepthMode.DISABLED
@@ -82,17 +82,20 @@ fun ARScannerScreen(onFinishedAR: () -> Unit) {
                                 if (image.trackingState == TrackingState.TRACKING && !isObjectDetected) {
                                     Log.d("AR_MEMORI", "DETECÇÃO: Imagem reconhecida!")
                                     isObjectDetected = true
-                                    
+
                                     scope.launch {
                                         try {
                                             Log.d("AR_MEMORI", "MODELO: Tentando carregar model.glb")
                                             val modelInstance = modelLoader.loadModelInstance("model.glb")
                                             if (modelInstance != null) {
-                                                val modelNode = ModelNode(modelInstance = modelInstance).apply {
-                                                    // Escala reduzida para garantir que caiba na tela (0.5 = 50%)
-                                                    scale = io.github.sceneview.math.Position(0.5f, 0.5f, 0.5f)
+                                                val modelNode = ModelNode(
+                                                    modelInstance = modelInstance,
+                                                    scaleToUnits = 0.3f,
+                                                    centerOrigin = io.github.sceneview.math.Position(0f, 0f, 0f)
+                                                ).apply {
+                                                    rotation = io.github.sceneview.math.Rotation(x = -90f)
                                                 }
-                                                
+
                                                 val anchor = image.createAnchor(image.centerPose)
                                                 val anchorNode = AnchorNode(engine, anchor)
                                                 anchorNode.addChildNode(modelNode)
@@ -143,7 +146,7 @@ fun ARScannerScreen(onFinishedAR: () -> Unit) {
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     if (isObjectDetected) {
                         Spacer(Modifier.height(24.dp))
                         Button(
