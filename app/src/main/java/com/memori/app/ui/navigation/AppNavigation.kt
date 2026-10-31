@@ -1,12 +1,14 @@
 package com.memori.app.ui.navigation
 
 import android.content.pm.ApplicationInfo
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,13 +22,20 @@ import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.screens.auth.LoginScreen
 import com.memori.app.ui.screens.auth.RegisterScreen
 import com.memori.app.ui.screens.auth.SplashScreen
+import com.memori.app.ui.screens.home.HomeMapScreen
 import com.memori.app.ui.screens.home.MainScreen
 import com.memori.app.ui.screens.trail.ARScannerScreen
+import com.memori.app.ui.screens.trail.BuscaGuiaOverlay
 import com.memori.app.ui.screens.trail.FinalStoryScreen
 import com.memori.app.ui.screens.trail.PuzzleScreen
 import com.memori.app.ui.screens.trail.RankingScreen
+import com.memori.app.ui.screens.trail.StoryScreen
+import com.memori.app.ui.screens.trail.dialogosPostAR
+import com.memori.app.ui.screens.trail.mensagensGuiaLanterna
 
 private const val CONFIRMATION_ROUTE = "confirmation"
+private const val STORY_POST_AR_ROUTE = "story_post_ar"
+private const val GUIA_LANTERNA_ROUTE = "guia_lanterna"
 
 @Composable
 fun AppNavigation() {
@@ -70,6 +79,7 @@ fun AppNavigation() {
         if (
             sessionReady &&
             sessionToken == null &&
+            !modoDesenvolvimento &&
             rotaAtual != null &&
             rotaAtual !in rotasPublicas
         ) {
@@ -189,13 +199,13 @@ fun AppNavigation() {
             }
 
             composable(Screen.ARScanner.route) {
-                fun abrirPuzzle() {
+                fun abrirHistoria() {
                     val rota = navController.currentBackStackEntry
                         ?.destination
                         ?.route
 
                     if (rota == Screen.ARScanner.route) {
-                        navController.navigate(Screen.Puzzle.route) {
+                        navController.navigate(STORY_POST_AR_ROUTE) {
                             popUpTo(Screen.ARScanner.route) {
                                 inclusive = true
                             }
@@ -209,14 +219,14 @@ fun AppNavigation() {
                 ) {
                     ARScannerScreen(
                         onFinishedAR = {
-                            abrirPuzzle()
+                            abrirHistoria()
                         }
                     )
 
                     if (modoDesenvolvimento) {
                         Button(
                             onClick = {
-                                abrirPuzzle()
+                                abrirHistoria()
                             },
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -226,6 +236,24 @@ fun AppNavigation() {
                             Text("Pular câmera")
                         }
                     }
+                }
+            }
+
+            composable(STORY_POST_AR_ROUTE) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    HomeMapScreen(onNavigateToProfile = {})
+
+                    StoryScreen(
+                        dialogos = dialogosPostAR,
+                        onFinished = {
+                            navController.navigate(Screen.Puzzle.route) {
+                                popUpTo(STORY_POST_AR_ROUTE) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
                 }
             }
 
@@ -256,11 +284,30 @@ fun AppNavigation() {
                 FinalStoryScreen(
                     timeElapsed = time,
                     onNavigateToRanking = {
-                        navController.navigate(Screen.Ranking.route) {
+                        navController.navigate(GUIA_LANTERNA_ROUTE) {
                             launchSingleTop = true
                         }
                     }
                 )
+            }
+
+            // Último balão da Yumi, em cima do mapa, antes do ranking
+            composable(GUIA_LANTERNA_ROUTE) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    HomeMapScreen(onNavigateToProfile = {})
+
+                    BuscaGuiaOverlay(
+                        mensagens = mensagensGuiaLanterna,
+                        onEntendido = {
+                            navController.navigate(Screen.Ranking.route) {
+                                popUpTo(GUIA_LANTERNA_ROUTE) {
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                            }
+                        }
+                    )
+                }
             }
 
             composable(Screen.Ranking.route) {

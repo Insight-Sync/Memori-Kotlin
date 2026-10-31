@@ -93,6 +93,7 @@ fun LoginScreen(
     ) {
         AuthHeader()
 
+
         Spacer(modifier = Modifier.height(40.dp))
 
         Column(
@@ -187,6 +188,21 @@ fun LoginScreen(
                         textDecoration = TextDecoration.Underline
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onNavigateToHome,
+                enabled = !loading,
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(
+                    text = "Pular Login",
+                    color = AuthCoral,
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))

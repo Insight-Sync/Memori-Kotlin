@@ -223,11 +223,7 @@ fun HomeMapScreen(
             )
 
             setOnMarkerClickListener { _, _ ->
-                Toast.makeText(
-                    context,
-                    "Guaracui",
-                    Toast.LENGTH_SHORT
-                ).show()
+                abrirTrilhaAtual()
                 true
             }
         }

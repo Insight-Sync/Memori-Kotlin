@@ -1,27 +1,22 @@
 package com.memori.app.ui.screens.home
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Collections
-import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -31,11 +26,10 @@ import com.memori.app.R
 import com.memori.app.ui.screens.auth.LocalAuthViewModel
 import com.memori.app.ui.screens.profile.AchievementsScreen
 import com.memori.app.ui.screens.profile.ProfileScreen
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
+import com.memori.app.ui.screens.trail.BuscaGuiaOverlay
+import com.memori.app.ui.screens.trail.StoryScreen
+import com.memori.app.ui.screens.trail.dialogosIntro
+import com.memori.app.ui.screens.trail.mensagensGuiaBusca
 
 internal val HomeCoral = Color(0xFFFF666B)
 internal val HomePink = Color(0xFFFFB3B7)
@@ -57,6 +51,11 @@ fun MainScreen(
 
     var showTrailDialog by remember {
         mutableStateOf(false)
+    }
+
+    // 0 = história da Yumi, 1 = primeiro balão de busca, 2 = nada
+    var etapaIntro by remember {
+        mutableIntStateOf(2)
     }
 
     fun navegarPara(rota: String) {
@@ -133,7 +132,26 @@ fun MainScreen(
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
                 .padding(bottom = 24.dp).widthIn(max = 320.dp).fillMaxWidth(0.82f)
         )
+
+        // Depois do "Jogar": história da Yumi e depois o primeiro balão
+        if (rotaAtual == "map") {
+            when (etapaIntro) {
+                0 -> StoryScreen(
+                    dialogos = dialogosIntro,
+                    onFinished = { etapaIntro = 1 }
+                )
+
+                1 -> BuscaGuiaOverlay(
+                    mensagens = mensagensGuiaBusca,
+                    onEntendido = {
+                        etapaIntro = 2
+                        onNavigateToTrailStart()
+                    }
+                )
+            }
+        }
     }
+
     if (showTrailDialog) {
         Dialog(
             onDismissRequest = {
@@ -167,7 +185,7 @@ fun MainScreen(
                         .clip(RoundedCornerShape(100.dp))
                         .clickable {
                             showTrailDialog = false
-                            onNavigateToTrailStart()
+                            etapaIntro = 0
                         }
                         .semantics {
                             contentDescription = "Jogar"
