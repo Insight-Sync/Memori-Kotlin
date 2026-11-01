@@ -38,7 +38,7 @@ data class UsuarioResponse(
     val avatar: String? = null
 )
 
-// O servidor devolve só o token no login; "usuario" é opcional
+
 data class LoginResponse(
     val token: String,
     val usuario: UsuarioResponse? = null
@@ -59,7 +59,7 @@ interface AuthApi {
         @Body dados: LoginRequest
     ): LoginResponse
 
-    // O servidor responde só "Created" (texto puro), então o corpo é ignorado
+
     @POST("api/usuario")
     suspend fun register(
         @Body dados: RegisterRequest
@@ -81,14 +81,13 @@ interface AuthApi {
 object ApiClient {
     private const val BASE_URL = "https://memori-crm.onrender.com/"
 
-    // Timeout longo: o Render gratuito leva de 30 a 60 s para acordar
     val okHttp = OkHttpClient.Builder()
         .connectTimeout(90, TimeUnit.SECONDS)
         .readTimeout(90, TimeUnit.SECONDS)
         .writeTimeout(90, TimeUnit.SECONDS)
         .addInterceptor(
             HttpLoggingInterceptor().apply {
-                // Troque por Level.NONE antes de entregar aos professores
+
                 level = HttpLoggingInterceptor.Level.BODY
             }
         )

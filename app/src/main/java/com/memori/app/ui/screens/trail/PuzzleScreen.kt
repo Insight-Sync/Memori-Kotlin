@@ -70,7 +70,7 @@ fun isSolved(tiles: List<Int>): Boolean {
 private fun novoTabuleiro(): List<Int> {
     var pecas = (0..8).shuffled()
 
-    // Garante um embaralhamento de verdade: pelo menos 6 peças fora do lugar
+
     while (pecas.indices.count { pecas[it] != it } < 6) {
         pecas = (0..8).shuffled()
     }

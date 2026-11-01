@@ -44,15 +44,14 @@ val dialogosPostAR = listOf(
     "Agora por favor, me ajude a encontrar a outra!"
 )
 
-// ---- Posição da Yumi e do balão (ajusta só aqui) ----
+
 private const val YUMI_ALTURA = 0.48f
 private const val YUMI_SOBE = 0.13f
 private const val BALAO_LARGURA = 0.58f
 private const val BALAO_ESQUERDA = 0.32f
 private val BALAO_FOLGA = 12.dp
 
-// ---- Ritmo da boca (ajusta só aqui) ----
-// Cada par = (ms com a boca ABERTA, ms com a boca FECHADA). Maior = mais lento.
+
 private val BOCA_RITMO = listOf(
     900L to 700L,
     750L to 850L,
@@ -84,7 +83,7 @@ fun StoryScreen(
         digitando = false
     }
 
-    // Boca: troca direta entre as duas imagens (sem mistura), em ritmo lento e variado
+
     LaunchedEffect(digitando) {
         if (digitando) {
             var i = 0
@@ -101,7 +100,7 @@ fun StoryScreen(
         }
     }
 
-    // Respiração suave do personagem enquanto fala
+
     val escala by animateFloatAsState(
         targetValue = if (digitando) 1.015f else 1f,
         animationSpec = tween(900, easing = FastOutSlowInEasing),
@@ -142,7 +141,7 @@ fun StoryScreen(
         val alturaYumi = maxHeight * YUMI_ALTURA
         val yumiSobe = maxHeight * YUMI_SOBE
 
-        // Yumi: as duas imagens ficam carregadas, mas só UMA é visível por vez
+
         Box(
             modifier = Modifier
                 .height(alturaYumi)

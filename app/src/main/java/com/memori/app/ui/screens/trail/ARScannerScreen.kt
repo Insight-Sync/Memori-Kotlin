@@ -53,14 +53,14 @@ fun ARScannerScreen(onFinishedAR: () -> Unit) {
             AndroidView(
                 factory = { ctx ->
                     ARSceneView(ctx).apply {
-                        // Limpa logs de erro de toque/chão
+
 
                         configureSession { session, config ->
                             val database = AugmentedImageDatabase(session)
                             try {
                                 context.assets.open("marker.jpg").use { isr ->
                                     val bitmap = BitmapFactory.decodeStream(isr)
-                                    // 0.2f = 20cm físico. Essencial para o 3D aparecer.
+
                                     database.addImage("monumento", bitmap, 0.2f)
                                     Log.d("AR_MEMORI", "DATABASE: Marcador marker.jpg carregado")
                                 }
@@ -70,7 +70,7 @@ fun ARScannerScreen(onFinishedAR: () -> Unit) {
                             config.augmentedImageDatabase = database
                             config.focusMode = Config.FocusMode.AUTO
 
-                            // Desativa o que causa erro no Logcat
+
                             config.planeFindingMode = Config.PlaneFindingMode.DISABLED
                             config.depthMode = Config.DepthMode.DISABLED
                             config.lightEstimationMode = Config.LightEstimationMode.DISABLED

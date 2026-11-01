@@ -190,20 +190,7 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
 
-            TextButton(
-                onClick = onNavigateToHome,
-                enabled = !loading,
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(
-                    text = "Pular Login",
-                    color = AuthCoral,
-                    fontSize = 14.sp,
-                    textDecoration = TextDecoration.Underline
-                )
-            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

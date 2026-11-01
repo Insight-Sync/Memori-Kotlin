@@ -44,7 +44,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
-// Guarda o tempo da jogada que acabou de terminar, para o card do ranking mostrar
+
 object UltimaJogada {
     var tempoSegundos: Int? = null
 }

@@ -215,32 +215,14 @@ fun AppNavigation() {
                     }
                 }
 
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    ARScannerScreen(
-                        onFinishedAR = {
-                            abrirHistoria()
-                        }
-                    )
-
-                    if (modoDesenvolvimento) {
-                        Button(
-                            onClick = {
-                                abrirHistoria()
-                            },
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .navigationBarsPadding()
-                                .padding(24.dp)
-                        ) {
-                            Text("Pular câmera")
-                        }
+                ARScannerScreen(
+                    onFinishedAR = {
+                        abrirHistoria()
                     }
-                }
+                )
             }
 
-            // História da Yumi depois da câmera, com o mapa ao fundo
+
             composable(STORY_POST_AR_ROUTE) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     HomeMapScreen(onNavigateToProfile = {})
@@ -286,7 +268,7 @@ fun AppNavigation() {
                 FinalStoryScreen(
                     timeElapsed = time,
                     onNavigateToRanking = {
-                        // Guarda o tempo desta jogada para o card do ranking
+
                         UltimaJogada.tempoSegundos = time
 
                         navController.navigate(GUIA_LANTERNA_ROUTE) {
@@ -296,7 +278,7 @@ fun AppNavigation() {
                 )
             }
 
-            // Último balão da Yumi, em cima do mapa, antes do ranking
+
             composable(GUIA_LANTERNA_ROUTE) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     HomeMapScreen(onNavigateToProfile = {})
@@ -318,7 +300,7 @@ fun AppNavigation() {
             composable(Screen.Ranking.route) {
                 RankingScreen(
                     onBackToHome = {
-                        // Limpa o tempo da jogada ao sair do ranking
+
                         UltimaJogada.tempoSegundos = null
 
                         navController.navigate(Screen.HomeMap.route) {

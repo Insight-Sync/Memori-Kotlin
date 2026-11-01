@@ -87,7 +87,7 @@ class AuthViewModel(
         }
     }
 
-    // Lê o campo "id" que vem dentro do token JWT
+
     private fun idDoToken(token: String): String {
         val partes = token.split(".")
         require(partes.size == 3) { "Token inválido." }
@@ -130,7 +130,7 @@ class AuthViewModel(
                     "A API não retornou um token válido."
                 }
 
-                // O servidor devolve só o token: o id vem de dentro dele
+
                 val idUsuario = resposta.usuario?.id
                     ?: idDoToken(resposta.token)
 
