@@ -91,7 +91,7 @@ Links úteis:
 ### 1. Clonar o repositório
 
 ```bash
-git clone https://github.com/samsesz/Memori-PI.git
+git clone https://github.com/Insight-Sync/Memori-Kotlin
 ```
 
 Abra a pasta clonada no Android Studio e aguarde a sincronização do Gradle.
