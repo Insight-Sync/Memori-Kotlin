@@ -1,16 +1,11 @@
 package com.memori.app.ui.navigation
 
 import android.content.pm.ApplicationInfo
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -26,7 +21,6 @@ import com.memori.app.ui.screens.home.HomeMapScreen
 import com.memori.app.ui.screens.home.MainScreen
 import com.memori.app.ui.screens.trail.ARScannerScreen
 import com.memori.app.ui.screens.trail.BuscaGuiaOverlay
-import com.memori.app.ui.screens.trail.FinalStoryScreen
 import com.memori.app.ui.screens.trail.PuzzleScreen
 import com.memori.app.ui.screens.trail.RankingScreen
 import com.memori.app.ui.screens.trail.StoryScreen
@@ -222,7 +216,6 @@ fun AppNavigation() {
                 )
             }
 
-
             composable(STORY_POST_AR_ROUTE) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     HomeMapScreen(onNavigateToProfile = {})
@@ -244,7 +237,12 @@ fun AppNavigation() {
             composable(Screen.Puzzle.route) {
                 PuzzleScreen(
                     onPuzzleCompleted = { time ->
-                        navController.navigate("final_story/$time") {
+                        UltimaJogada.tempoSegundos = time
+
+                        navController.navigate(GUIA_LANTERNA_ROUTE) {
+                            popUpTo(Screen.Puzzle.route) {
+                                inclusive = true
+                            }
                             launchSingleTop = true
                         }
                     },
@@ -258,26 +256,6 @@ fun AppNavigation() {
                     }
                 )
             }
-
-            composable("final_story/{time}") { entry ->
-                val time = entry.arguments
-                    ?.getString("time")
-                    ?.toIntOrNull()
-                    ?: 0
-
-                FinalStoryScreen(
-                    timeElapsed = time,
-                    onNavigateToRanking = {
-
-                        UltimaJogada.tempoSegundos = time
-
-                        navController.navigate(GUIA_LANTERNA_ROUTE) {
-                            launchSingleTop = true
-                        }
-                    }
-                )
-            }
-
 
             composable(GUIA_LANTERNA_ROUTE) {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -300,7 +278,6 @@ fun AppNavigation() {
             composable(Screen.Ranking.route) {
                 RankingScreen(
                     onBackToHome = {
-
                         UltimaJogada.tempoSegundos = null
 
                         navController.navigate(Screen.HomeMap.route) {
