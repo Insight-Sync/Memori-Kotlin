@@ -30,6 +30,7 @@ import com.memori.app.ui.screens.trail.FinalStoryScreen
 import com.memori.app.ui.screens.trail.PuzzleScreen
 import com.memori.app.ui.screens.trail.RankingScreen
 import com.memori.app.ui.screens.trail.StoryScreen
+import com.memori.app.ui.screens.trail.UltimaJogada
 import com.memori.app.ui.screens.trail.dialogosPostAR
 import com.memori.app.ui.screens.trail.mensagensGuiaLanterna
 
@@ -239,6 +240,7 @@ fun AppNavigation() {
                 }
             }
 
+            // História da Yumi depois da câmera, com o mapa ao fundo
             composable(STORY_POST_AR_ROUTE) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     HomeMapScreen(onNavigateToProfile = {})
@@ -284,6 +286,9 @@ fun AppNavigation() {
                 FinalStoryScreen(
                     timeElapsed = time,
                     onNavigateToRanking = {
+                        // Guarda o tempo desta jogada para o card do ranking
+                        UltimaJogada.tempoSegundos = time
+
                         navController.navigate(GUIA_LANTERNA_ROUTE) {
                             launchSingleTop = true
                         }
@@ -313,6 +318,9 @@ fun AppNavigation() {
             composable(Screen.Ranking.route) {
                 RankingScreen(
                     onBackToHome = {
+                        // Limpa o tempo da jogada ao sair do ranking
+                        UltimaJogada.tempoSegundos = null
+
                         navController.navigate(Screen.HomeMap.route) {
                             popUpTo(Screen.HomeMap.route) {
                                 inclusive = true

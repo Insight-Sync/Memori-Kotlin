@@ -1,6 +1,9 @@
 package com.memori.app.ui.screens.auth
 
 import com.google.gson.annotations.SerializedName
+import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.Body
@@ -35,9 +38,10 @@ data class UsuarioResponse(
     val avatar: String? = null
 )
 
+// O servidor devolve só o token no login; "usuario" é opcional
 data class LoginResponse(
     val token: String,
-    val usuario: UsuarioResponse
+    val usuario: UsuarioResponse? = null
 )
 
 data class RegisterResponse(
@@ -55,10 +59,11 @@ interface AuthApi {
         @Body dados: LoginRequest
     ): LoginResponse
 
+    // O servidor responde só "Created" (texto puro), então o corpo é ignorado
     @POST("api/usuario")
     suspend fun register(
         @Body dados: RegisterRequest
-    ): RegisterResponse
+    )
 
     @GET("api/usuario/{id}")
     suspend fun buscarPerfil(
@@ -74,11 +79,25 @@ interface AuthApi {
 }
 
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:3000/"
+    private const val BASE_URL = "https://memori-crm.onrender.com/"
+
+    // Timeout longo: o Render gratuito leva de 30 a 60 s para acordar
+    val okHttp = OkHttpClient.Builder()
+        .connectTimeout(90, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
+        .writeTimeout(90, TimeUnit.SECONDS)
+        .addInterceptor(
+            HttpLoggingInterceptor().apply {
+                // Troque por Level.NONE antes de entregar aos professores
+                level = HttpLoggingInterceptor.Level.BODY
+            }
+        )
+        .build()
 
     val authApi: AuthApi by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
+            .client(okHttp)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(AuthApi::class.java)

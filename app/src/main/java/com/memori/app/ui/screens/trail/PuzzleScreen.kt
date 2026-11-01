@@ -68,10 +68,14 @@ fun isSolved(tiles: List<Int>): Boolean {
 }
 
 private fun novoTabuleiro(): List<Int> {
-    val pecas = (0..8).toMutableList()
-    val indices = pecas.indices.shuffled().take(2)
-    Collections.swap(pecas, indices[0], indices[1])
-    return pecas.toList()
+    var pecas = (0..8).shuffled()
+
+    // Garante um embaralhamento de verdade: pelo menos 6 peças fora do lugar
+    while (pecas.indices.count { pecas[it] != it } < 6) {
+        pecas = (0..8).shuffled()
+    }
+
+    return pecas
 }
 
 @Composable
@@ -228,8 +232,8 @@ fun PuzzleScreen(
                 )
             )
 
-            check(resposta.tentativa.tentativaId == tentativaId)
-            check(resposta.tentativa.tempoSegundos == segundos)
+            check(resposta.tentativa?.tentativaId == tentativaId)
+            check(resposta.tentativa?.tempoSegundos == segundos)
 
             if (!navegando) {
                 navegando = true
