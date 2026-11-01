@@ -268,25 +268,6 @@ fun ARScannerScreen(onFinishedAR: () -> Unit) {
                         fontWeight = FontWeight.Bold
                     )
                 }
-            } else {
-                Button(
-                    onClick = { continuar() },
-                    enabled = !avancando,
-                    modifier = Modifier
-                        .height(56.dp)
-                        .width(220.dp),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF666B),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = "Pular leitura",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
         }
     }
