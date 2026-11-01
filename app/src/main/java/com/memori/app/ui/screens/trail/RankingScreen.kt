@@ -44,6 +44,11 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
+
+object UltimaJogada {
+    var tempoSegundos: Int? = null
+}
+
 @Composable
 fun RankingScreen(onBackToHome: () -> Unit) {
     BackHandler(onBack = onBackToHome)
@@ -54,6 +59,8 @@ fun RankingScreen(onBackToHome: () -> Unit) {
     val coral = Color(0xFFFF666B)
     val debug = (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
     val demonstracao = token == null && debug
+
+    val tempoDaJogada = remember { UltimaJogada.tempoSegundos }
 
     var resposta by remember(token) { mutableStateOf<RankingTemposResponse?>(null) }
     var carregando by remember(token) { mutableStateOf(false) }
@@ -194,6 +201,41 @@ fun RankingScreen(onBackToHome: () -> Unit) {
                             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            // Resultado da jogada que acabou de terminar
+                            val meuResultado = resposta?.meuResultado
+                            if (tempoDaJogada != null) {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    border = BorderStroke(1.5.dp, coral)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("Seu tempo", color = Color.Gray, fontSize = 12.sp)
+                                        Text(
+                                            formatarTempo(tempoDaJogada) + " h",
+                                            color = coral, fontSize = 22.sp
+                                        )
+                                        if (meuResultado != null) {
+                                            Text(
+                                                "Sua posição: #${meuResultado.posicao.toString().padStart(2, '0')}",
+                                                color = Color.Gray, fontSize = 12.sp
+                                            )
+                                            if (meuResultado.tempoSegundos != tempoDaJogada) {
+                                                Text(
+                                                    "Seu recorde: " + formatarTempo(meuResultado.tempoSegundos) + " h",
+                                                    color = Color.Gray, fontSize = 12.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(14.dp))
+                            }
+
                             val primeiro = resultados.first()
                             Text(
                                 "#${primeiro.posicao.toString().padStart(2, '0')} PRIMEIRO LUGAR",

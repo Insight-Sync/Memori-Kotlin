@@ -32,7 +32,7 @@ val mensagensGuiaLanterna = listOf(
     "Ufa! Obrigada por construir a lanterna e me ajudar nessa jornada!"
 )
 
-// Posição fixa do balão: os dois ficam sempre na mesma altura
+
 private val TOPO_FIXO = 80.dp
 
 @Composable
@@ -44,7 +44,7 @@ fun BuscaGuiaOverlay(
     var passo by remember { mutableIntStateOf(0) }
     val ultimo = passo == mensagens.lastIndex
 
-    // Ícone da Yumi: quanto dele sai para fora do balão (por baixo)
+
     val tamanhoIcone = 72.dp
     val parteFora = 48.dp
     val parteDentro = tamanhoIcone - parteFora

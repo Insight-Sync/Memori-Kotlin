@@ -30,6 +30,7 @@ import com.memori.app.ui.screens.trail.FinalStoryScreen
 import com.memori.app.ui.screens.trail.PuzzleScreen
 import com.memori.app.ui.screens.trail.RankingScreen
 import com.memori.app.ui.screens.trail.StoryScreen
+import com.memori.app.ui.screens.trail.UltimaJogada
 import com.memori.app.ui.screens.trail.dialogosPostAR
 import com.memori.app.ui.screens.trail.mensagensGuiaLanterna
 
@@ -214,30 +215,13 @@ fun AppNavigation() {
                     }
                 }
 
-                Box(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    ARScannerScreen(
-                        onFinishedAR = {
-                            abrirHistoria()
-                        }
-                    )
-
-                    if (modoDesenvolvimento) {
-                        Button(
-                            onClick = {
-                                abrirHistoria()
-                            },
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .navigationBarsPadding()
-                                .padding(24.dp)
-                        ) {
-                            Text("Pular câmera")
-                        }
+                ARScannerScreen(
+                    onFinishedAR = {
+                        abrirHistoria()
                     }
-                }
+                )
             }
+
 
             composable(STORY_POST_AR_ROUTE) {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -284,6 +268,9 @@ fun AppNavigation() {
                 FinalStoryScreen(
                     timeElapsed = time,
                     onNavigateToRanking = {
+
+                        UltimaJogada.tempoSegundos = time
+
                         navController.navigate(GUIA_LANTERNA_ROUTE) {
                             launchSingleTop = true
                         }
@@ -291,7 +278,7 @@ fun AppNavigation() {
                 )
             }
 
-            // Último balão da Yumi, em cima do mapa, antes do ranking
+
             composable(GUIA_LANTERNA_ROUTE) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     HomeMapScreen(onNavigateToProfile = {})
@@ -313,6 +300,9 @@ fun AppNavigation() {
             composable(Screen.Ranking.route) {
                 RankingScreen(
                     onBackToHome = {
+
+                        UltimaJogada.tempoSegundos = null
+
                         navController.navigate(Screen.HomeMap.route) {
                             popUpTo(Screen.HomeMap.route) {
                                 inclusive = true

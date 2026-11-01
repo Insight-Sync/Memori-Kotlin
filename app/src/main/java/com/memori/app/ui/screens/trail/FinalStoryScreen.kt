@@ -21,7 +21,7 @@ fun FinalStoryScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFFF9C4)) // Fundo amarelo claro
+            .background(Color(0xFFFFF9C4))
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

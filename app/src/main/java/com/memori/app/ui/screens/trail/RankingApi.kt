@@ -1,5 +1,6 @@
 package com.memori.app.ui.screens.trail
 
+import com.memori.app.ui.screens.auth.ApiClient
 import java.io.IOException
 import java.util.Locale
 import org.json.JSONObject
@@ -18,17 +19,17 @@ data class ResultadoRequest(
 )
 
 data class TentativaResponse(
-    val id: String,
-    val usuarioId: String,
-    val desafioId: String,
-    val tentativaId: String,
-    val tempoSegundos: Int,
-    val concluidoEm: String
+    val id: String? = null,
+    val usuarioId: String? = null,
+    val desafioId: String? = null,
+    val tentativaId: String? = null,
+    val tempoSegundos: Int? = null,
+    val concluidoEm: String? = null
 )
 
 data class SalvarResultadoResponse(
-    val message: String,
-    val tentativa: TentativaResponse
+    val message: String? = null,
+    val tentativa: TentativaResponse? = null
 )
 
 data class RankingTempo(
@@ -63,7 +64,8 @@ interface RankingApi {
 object RankingClient {
     val api: RankingApi by lazy {
         Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:3000/")
+            .baseUrl("https://memori-crm.onrender.com/")
+            .client(ApiClient.okHttp)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(RankingApi::class.java)

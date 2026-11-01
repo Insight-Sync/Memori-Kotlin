@@ -53,7 +53,7 @@ fun MainScreen(
         mutableStateOf(false)
     }
 
-    // 0 = história da Yumi, 1 = primeiro balão de busca, 2 = nada
+
     var etapaIntro by remember {
         mutableIntStateOf(2)
     }
@@ -133,7 +133,7 @@ fun MainScreen(
                 .padding(bottom = 24.dp).widthIn(max = 320.dp).fillMaxWidth(0.82f)
         )
 
-        // Depois do "Jogar": história da Yumi e depois o primeiro balão
+
         if (rotaAtual == "map") {
             when (etapaIntro) {
                 0 -> StoryScreen(
